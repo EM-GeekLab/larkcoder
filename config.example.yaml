@@ -1,0 +1,41 @@
+agent_runtime:
+  container_template:
+    cmd: >
+      docker run -d \
+      --name agent-{{TASK_ID}} \
+      --network bridge_autocoder \
+      -v /host/path/to/auth:/root/.config/claude-code \
+      -v /host/workspaces/{{TASK_ID}}:/app \
+      -e ANTHROPIC_API_KEY={{ENV_KEY}} \
+      localhost/dev-container-with-acp:latest \
+      --allow-all-tools \
+      --sse-port 3000
+  connection:
+    type: "sse"
+    url_template: "http://agent-{{TASK_ID}}:3000/sse"
+
+server:
+  port: 8080
+  public_base_url: "http://localhost:8080"
+
+network:
+  name: "bridge_autocoder"
+
+lark:
+  app_id: "your_app_id"
+  app_secret: "your_app_secret"
+  token_url: "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
+  comment_url_template: "https://open.feishu.cn/open-apis/drive/v1/files/{DOC_TOKEN}/comments"
+  comment_file_type: "docx"
+  message_card_url_template: "https://open.feishu.cn/open-apis/im/v1/messages"
+  message_card_receive_id: "oc_123"
+  message_card_receive_id_type: "open_id"
+  doc_create_url_template: "https://open.feishu.cn/open-apis/docx/v1/documents"
+  doc_token_type: "auto"
+  wiki_node_url_template: "https://open.feishu.cn/open-apis/wiki/v2/spaces/get_node"
+
+github:
+  token: "github-token"
+  repository: "org/repo"
+  default_base_branch: "main"
+  api_base_url: "https://api.github.com"

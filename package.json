@@ -1,0 +1,37 @@
+{
+  "name": "autocoder-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc",
+    "test": "vitest run",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.13.1",
+    "@hono/node-server": "^1.17.1",
+    "@loglayer/transport-simple-pretty-terminal": "^2.3.1",
+    "@orpc/server": "^1.13.4",
+    "dockerode": "^4.0.9",
+    "hono": "^4.7.0",
+    "loglayer": "^8.4.0",
+    "redis": "^4.7.0",
+    "serialize-error": "^13.0.1",
+    "yaml": "^2.5.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.21",
+    "@types/node": "^20.11.30",
+    "oxfmt": "^0.27.0",
+    "oxlint": "^1.42.0",
+    "typescript": "^5.7.3",
+    "vitest": "^1.6.0"
+  }
+}
