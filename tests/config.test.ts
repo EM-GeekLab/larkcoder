@@ -1,68 +1,81 @@
-import { describe, expect, it } from "vitest"
-import { appConfigSchema, type RawConfig } from "../src/config/types.js"
+import { describe, expect, it } from "bun:test"
+import { appConfigSchema } from "../src/config/schema.js"
 
 describe("appConfigSchema", () => {
-  it("maps raw config into app config", () => {
-    const raw: RawConfig = {
-      agent_runtime: {
-        container_template: {
-          cmd: "docker run --name agent-{{TASK_ID}}",
-        },
-        connection: {
-          type: "sse",
-          url_template: "http://agent-{{TASK_ID}}:3000/sse",
-        },
-      },
-      server: {
-        port: 9000,
-        public_base_url: "http://localhost:9000",
-      },
-      network: {
-        name: "bridge_autocoder",
-      },
-      github: {
-        webhook_secret: "secret",
-        token: "token",
-        api_base_url: "https://api.github.com",
-        repository: "org/repo",
-        default_base_branch: "main",
-      },
+  const validConfig = {
+    lark: {
+      app_id: "cli_test",
+      app_secret: "secret123",
+    },
+    agent: {
+      working_dir: "/home/deploy",
+    },
+  }
+
+  it("parses valid config with defaults", () => {
+    const result = appConfigSchema.parse(validConfig)
+    expect(result.lark.appId).toBe("cli_test")
+    expect(result.lark.appSecret).toBe("secret123")
+    expect(result.agent.command).toBe("claude")
+    expect(result.agent.args).toEqual([])
+    expect(result.agent.workingDir).toBe("/home/deploy")
+    expect(result.agent.portRange).toEqual([3100, 3200])
+    expect(result.database.path).toBe("data/larkcoder.db")
+  })
+
+  it("parses full config", () => {
+    const full = {
+      ...validConfig,
       lark: {
-        app_id: "app",
-        app_secret: "secret",
-        token_url:
-          "https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal",
-        comment_url_template: "/open-apis/drive/v1/files/{DOC_TOKEN}/comments",
-        comment_file_type: "docx",
-        message_card_url_template: "/open-apis/im/v1/messages",
-        message_card_receive_id: "oc_123",
-        message_card_receive_id_type: "open_id",
-        doc_create_url_template: "/open-apis/docx/v1/documents",
-        doc_token_type: "auto",
-        wiki_node_url_template: "/open-apis/wiki/v2/spaces/get_node",
+        ...validConfig.lark,
+        doc_token: "doxcn123",
+        doc_type: "docx",
       },
+      agent: {
+        ...validConfig.agent,
+        command: "/usr/local/bin/claude",
+        args: ["--sse-port", "{{PORT}}"],
+        port_range: [4000, 4100],
+        max_turns: 30,
+        system_prompt: "You are helpful.",
+      },
+      database: { path: "/tmp/test.db" },
     }
 
-    const config = appConfigSchema.parse(raw)
-    expect(config.agentRuntime.containerTemplate.cmd).toContain("docker run")
-    expect(config.agentRuntime.connection.urlTemplate).toContain("agent-")
-    expect(config.server.port).toBe(9000)
-    expect(config.server.publicBaseUrl).toBe("http://localhost:9000")
-    expect(config.network?.name).toBe("bridge_autocoder")
-    expect(config.github?.webhookSecret).toBe("secret")
-    expect(config.github?.token).toBe("token")
-    expect(config.github?.repository).toBe("org/repo")
-    expect(config.github?.defaultBaseBranch).toBe("main")
-    expect(config.github?.apiBaseUrl).toBe("https://api.github.com")
-    expect(config.lark?.messageCardReceiveId).toBe("oc_123")
-    expect(config.lark?.messageCardReceiveIdType).toBe("open_id")
-    expect(config.lark?.commentFileType).toBe("docx")
-    expect(config.lark?.docCreateUrlTemplate).toBe(
-      "/open-apis/docx/v1/documents",
-    )
-    expect(config.lark?.docTokenType).toBe("auto")
-    expect(config.lark?.wikiNodeUrlTemplate).toBe(
-      "/open-apis/wiki/v2/spaces/get_node",
-    )
+    const result = appConfigSchema.parse(full)
+    expect(result.lark.docToken).toBe("doxcn123")
+    expect(result.lark.docType).toBe("docx")
+    expect(result.agent.command).toBe("/usr/local/bin/claude")
+    expect(result.agent.args).toEqual(["--sse-port", "{{PORT}}"])
+    expect(result.agent.portRange).toEqual([4000, 4100])
+    expect(result.agent.maxTurns).toBe(30)
+    expect(result.agent.systemPrompt).toBe("You are helpful.")
+    expect(result.database.path).toBe("/tmp/test.db")
+  })
+
+  it("transforms snake_case to camelCase", () => {
+    const result = appConfigSchema.parse(validConfig)
+    expect(result.lark).toHaveProperty("appId")
+    expect(result.lark).toHaveProperty("appSecret")
+    expect(result.agent).toHaveProperty("workingDir")
+    expect(result.agent).toHaveProperty("portRange")
+  })
+
+  it("rejects missing lark.app_id", () => {
+    const bad = { ...validConfig, lark: { app_secret: "s" } }
+    expect(() => appConfigSchema.parse(bad)).toThrow()
+  })
+
+  it("rejects missing agent.working_dir", () => {
+    const bad = { ...validConfig, agent: {} }
+    expect(() => appConfigSchema.parse(bad)).toThrow()
+  })
+
+  it("rejects invalid doc_type", () => {
+    const bad = {
+      ...validConfig,
+      lark: { ...validConfig.lark, doc_type: "pdf" },
+    }
+    expect(() => appConfigSchema.parse(bad)).toThrow()
   })
 })
