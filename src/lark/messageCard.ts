@@ -1,29 +1,29 @@
-import type { WorkflowState } from "../workflow/types.js";
+import type { WorkflowState } from "../workflow/types.js"
 
 export type WorkflowCardInput = {
-  taskId: string;
-  state: WorkflowState;
-  summary?: string;
-  prUrl?: string;
-  telemetry?: WorkflowTelemetry;
-};
+  taskId: string
+  state: WorkflowState
+  summary?: string
+  prUrl?: string
+  telemetry?: WorkflowTelemetry
+}
 
 export type WorkflowTelemetry = {
-  summary: string;
-};
+  summary: string
+}
 
 export function buildWorkflowCard(
   input: WorkflowCardInput,
 ): Record<string, unknown> {
-  const lines = [`**Task:** ${input.taskId}`, `**State:** ${input.state}`];
+  const lines = [`**Task:** ${input.taskId}`, `**State:** ${input.state}`]
   if (input.summary) {
-    lines.push("", `**Plan:**\n${input.summary}`);
+    lines.push("", `**Plan:**\n${input.summary}`)
   }
   if (input.telemetry?.summary) {
-    lines.push("", `**Activity:** ${input.telemetry.summary}`);
+    lines.push("", `**Activity:** ${input.telemetry.summary}`)
   }
   if (input.prUrl) {
-    lines.push("", `**PR:** ${input.prUrl}`);
+    lines.push("", `**PR:** ${input.prUrl}`)
   }
 
   const elements: Array<Record<string, unknown>> = [
@@ -31,7 +31,7 @@ export function buildWorkflowCard(
       tag: "markdown",
       content: lines.join("\n"),
     },
-  ];
+  ]
 
   if (input.state === "Planning") {
     elements.push({
@@ -50,7 +50,7 @@ export function buildWorkflowCard(
           },
         },
       ],
-    });
+    })
   }
 
   if (input.prUrl) {
@@ -67,7 +67,7 @@ export function buildWorkflowCard(
           url: input.prUrl,
         },
       ],
-    });
+    })
   }
 
   return {
@@ -81,5 +81,5 @@ export function buildWorkflowCard(
       },
     },
     elements,
-  };
+  }
 }

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod"
 
 const rawConfigSchema = z.object({
   agent_runtime: z.object({
@@ -54,59 +54,59 @@ const rawConfigSchema = z.object({
       default_base_branch: z.string().min(1).optional(),
     })
     .optional(),
-});
+})
 
-export type RawConfig = z.input<typeof rawConfigSchema>;
+export type RawConfig = z.input<typeof rawConfigSchema>
 
 export const appConfigSchema = rawConfigSchema.transform((raw) => {
   const connection: {
-    type: "sse";
-    urlTemplate: string;
-    sendUrlTemplate?: string;
-    headers?: Record<string, string>;
+    type: "sse"
+    urlTemplate: string
+    sendUrlTemplate?: string
+    headers?: Record<string, string>
   } = {
     type: "sse",
     urlTemplate: raw.agent_runtime.connection.url_template,
-  };
+  }
 
   if (raw.agent_runtime.connection.send_url_template) {
-    connection.sendUrlTemplate = raw.agent_runtime.connection.send_url_template;
+    connection.sendUrlTemplate = raw.agent_runtime.connection.send_url_template
   }
 
   if (raw.agent_runtime.connection.headers) {
-    connection.headers = raw.agent_runtime.connection.headers;
+    connection.headers = raw.agent_runtime.connection.headers
   }
 
   const config: {
     agentRuntime: {
-      containerTemplate: { cmd: string };
-      connection: typeof connection;
-    };
-    server: { port: number; publicBaseUrl?: string };
-    network?: { name: string };
-    redis?: { url: string };
+      containerTemplate: { cmd: string }
+      connection: typeof connection
+    }
+    server: { port: number; publicBaseUrl?: string }
+    network?: { name: string }
+    redis?: { url: string }
     lark?: {
-      appId: string;
-      appSecret: string;
-      baseUrl?: string;
-      tokenUrl: string;
-      commentUrlTemplate: string;
-      commentFileType?: string;
-      messageCardUrlTemplate?: string;
-      messageCardReceiveId?: string;
-      messageCardReceiveIdType?: string;
-      docContentUrlTemplate?: string;
-      docCreateUrlTemplate?: string;
-      docTokenType?: "docx" | "wiki" | "auto";
-      wikiNodeUrlTemplate?: string;
-    };
+      appId: string
+      appSecret: string
+      baseUrl?: string
+      tokenUrl: string
+      commentUrlTemplate: string
+      commentFileType?: string
+      messageCardUrlTemplate?: string
+      messageCardReceiveId?: string
+      messageCardReceiveIdType?: string
+      docContentUrlTemplate?: string
+      docCreateUrlTemplate?: string
+      docTokenType?: "docx" | "wiki" | "auto"
+      wikiNodeUrlTemplate?: string
+    }
     github?: {
-      webhookSecret: string;
-      token?: string;
-      apiBaseUrl?: string;
-      repository?: string;
-      defaultBaseBranch?: string;
-    };
+      webhookSecret: string
+      token?: string
+      apiBaseUrl?: string
+      repository?: string
+      defaultBaseBranch?: string
+    }
   } = {
     agentRuntime: {
       containerTemplate: {
@@ -118,76 +118,76 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => {
       port: raw.server?.port ?? 8080,
       publicBaseUrl: raw.server?.public_base_url,
     },
-  };
+  }
 
   if (raw.network?.name) {
-    config.network = { name: raw.network.name };
+    config.network = { name: raw.network.name }
   }
 
   if (raw.redis) {
-    config.redis = { url: raw.redis.url };
+    config.redis = { url: raw.redis.url }
   }
 
   if (raw.lark) {
     const larkConfig: {
-      appId: string;
-      appSecret: string;
-      baseUrl?: string;
-      tokenUrl: string;
-      commentUrlTemplate: string;
-      commentFileType?: string;
-      messageCardUrlTemplate?: string;
-      messageCardReceiveId?: string;
-      messageCardReceiveIdType?: string;
-      docContentUrlTemplate?: string;
-      docCreateUrlTemplate?: string;
-      docTokenType?: "docx" | "wiki" | "auto";
-      wikiNodeUrlTemplate?: string;
+      appId: string
+      appSecret: string
+      baseUrl?: string
+      tokenUrl: string
+      commentUrlTemplate: string
+      commentFileType?: string
+      messageCardUrlTemplate?: string
+      messageCardReceiveId?: string
+      messageCardReceiveIdType?: string
+      docContentUrlTemplate?: string
+      docCreateUrlTemplate?: string
+      docTokenType?: "docx" | "wiki" | "auto"
+      wikiNodeUrlTemplate?: string
     } = {
       appId: raw.lark.app_id,
       appSecret: raw.lark.app_secret,
       tokenUrl: raw.lark.token_url,
       commentUrlTemplate: raw.lark.comment_url_template,
-    };
+    }
 
     if (raw.lark.base_url) {
-      larkConfig.baseUrl = raw.lark.base_url;
+      larkConfig.baseUrl = raw.lark.base_url
     }
 
     if (raw.lark.message_card_url_template) {
-      larkConfig.messageCardUrlTemplate = raw.lark.message_card_url_template;
+      larkConfig.messageCardUrlTemplate = raw.lark.message_card_url_template
     }
 
     if (raw.lark.comment_file_type) {
-      larkConfig.commentFileType = raw.lark.comment_file_type;
+      larkConfig.commentFileType = raw.lark.comment_file_type
     }
 
     if (raw.lark.message_card_receive_id) {
-      larkConfig.messageCardReceiveId = raw.lark.message_card_receive_id;
+      larkConfig.messageCardReceiveId = raw.lark.message_card_receive_id
     }
 
     if (raw.lark.message_card_receive_id_type) {
       larkConfig.messageCardReceiveIdType =
-        raw.lark.message_card_receive_id_type;
+        raw.lark.message_card_receive_id_type
     }
 
     if (raw.lark.doc_content_url_template) {
-      larkConfig.docContentUrlTemplate = raw.lark.doc_content_url_template;
+      larkConfig.docContentUrlTemplate = raw.lark.doc_content_url_template
     }
 
     if (raw.lark.doc_create_url_template) {
-      larkConfig.docCreateUrlTemplate = raw.lark.doc_create_url_template;
+      larkConfig.docCreateUrlTemplate = raw.lark.doc_create_url_template
     }
 
     if (raw.lark.doc_token_type) {
-      larkConfig.docTokenType = raw.lark.doc_token_type;
+      larkConfig.docTokenType = raw.lark.doc_token_type
     }
 
     if (raw.lark.wiki_node_url_template) {
-      larkConfig.wikiNodeUrlTemplate = raw.lark.wiki_node_url_template;
+      larkConfig.wikiNodeUrlTemplate = raw.lark.wiki_node_url_template
     }
 
-    config.lark = larkConfig;
+    config.lark = larkConfig
   }
 
   if (raw.github) {
@@ -197,10 +197,10 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => {
       apiBaseUrl: raw.github.api_base_url,
       repository: raw.github.repository,
       defaultBaseBranch: raw.github.default_base_branch,
-    };
+    }
   }
 
-  return config;
-});
+  return config
+})
 
-export type AppConfig = z.output<typeof appConfigSchema>;
+export type AppConfig = z.output<typeof appConfigSchema>

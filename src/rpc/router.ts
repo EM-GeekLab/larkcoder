@@ -1,7 +1,7 @@
-import { os } from "@orpc/server";
-import { z } from "zod";
-import type { LarkClient } from "../lark/larkClient.js";
-import type { WorkflowOrchestrator } from "../workflow/orchestrator.js";
+import { os } from "@orpc/server"
+import { z } from "zod"
+import type { LarkClient } from "../lark/larkClient.js"
+import type { WorkflowOrchestrator } from "../workflow/orchestrator.js"
 
 const taskDataSchema = z.object({
   docToken: z.string().min(1).optional(),
@@ -21,17 +21,17 @@ const taskDataSchema = z.object({
   githubHeadBranch: z.string().min(1).optional(),
   agentHost: z.string().min(1).optional(),
   agentPort: z.number().int().positive().optional(),
-});
+})
 
 type RpcContext = {
-  headers?: Record<string, string>;
-  workflow: WorkflowOrchestrator;
-  lark?: LarkClient;
-};
+  headers?: Record<string, string>
+  workflow: WorkflowOrchestrator
+  lark?: LarkClient
+}
 
-const builder = os.$context<RpcContext>();
+const builder = os.$context<RpcContext>()
 
-export const health = builder.handler(async () => ({ status: "ok" }));
+export const health = builder.handler(async () => ({ status: "ok" }))
 
 export const createTask = builder
   .input(
@@ -41,14 +41,14 @@ export const createTask = builder
     }),
   )
   .handler(async ({ context, input }) => {
-    return await context.workflow.createTask(input.taskId, input.data);
-  });
+    return await context.workflow.createTask(input.taskId, input.data)
+  })
 
 export const startCoding = builder
   .input(z.object({ taskId: z.string().min(1) }))
   .handler(async ({ context, input }) => {
-    return await context.workflow.startCoding(input.taskId);
-  });
+    return await context.workflow.startCoding(input.taskId)
+  })
 
 export const initPlanning = builder
   .input(
@@ -62,20 +62,20 @@ export const initPlanning = builder
     }),
   )
   .handler(async ({ context, input }) => {
-    let docToken = input.docToken;
+    let docToken = input.docToken
     if (!docToken && input.createDoc) {
       if (!context.lark) {
-        throw new Error("Lark is not configured for doc creation");
+        throw new Error("Lark is not configured for doc creation")
       }
       const created = await context.lark.createDocxDocument({
         title: input.docTitle ?? "AutoCoder Plan",
         folderToken: input.docFolderToken,
-      });
-      docToken = created?.documentId;
+      })
+      docToken = created?.documentId
     }
 
     if (!docToken && !input.markdown) {
-      throw new Error("docToken or markdown is required to init planning");
+      throw new Error("docToken or markdown is required to init planning")
     }
 
     if (input.markdown) {
@@ -83,11 +83,11 @@ export const initPlanning = builder
         input.taskId,
         input.markdown,
         docToken,
-      );
+      )
     }
 
-    return { ok: true, docToken };
-  });
+    return { ok: true, docToken }
+  })
 
 export const router = {
   system: {
@@ -98,6 +98,6 @@ export const router = {
     startCoding,
     initPlanning,
   },
-};
+}
 
-export type AppRouter = typeof router;
+export type AppRouter = typeof router

@@ -1,12 +1,12 @@
-import { spawn } from "node:child_process";
+import { spawn } from "node:child_process"
 
 export type CommandResult = {
-  command: string;
-  args: string[];
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-};
+  command: string
+  args: string[]
+  exitCode: number | null
+  stdout: string
+  stderr: string
+}
 
 export async function runCommand(
   command: string,
@@ -15,22 +15,22 @@ export async function runCommand(
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
-    });
+    })
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = ""
+    let stderr = ""
 
     child.stdout?.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
+      stdout += chunk.toString()
+    })
 
     child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
+      stderr += chunk.toString()
+    })
 
     child.on("error", (error) => {
-      reject(error);
-    });
+      reject(error)
+    })
 
     child.on("close", (code) => {
       resolve({
@@ -39,7 +39,7 @@ export async function runCommand(
         exitCode: code,
         stdout,
         stderr,
-      });
-    });
-  });
+      })
+    })
+  })
 }

@@ -1,8 +1,8 @@
-import { getSimplePrettyTerminal } from "@loglayer/transport-simple-pretty-terminal";
-import { LogLayer } from "loglayer";
-import { serializeError } from "serialize-error";
+import { getSimplePrettyTerminal } from "@loglayer/transport-simple-pretty-terminal"
+import { LogLayer } from "loglayer"
+import { serializeError } from "serialize-error"
 
-export type Logger = LogLayer;
+export type Logger = LogLayer
 
 const logger = new LogLayer({
   errorSerializer: serializeError,
@@ -10,14 +10,14 @@ const logger = new LogLayer({
     runtime: "node",
     level: process.env.NODE_ENV === "production" ? "info" : "trace",
   }),
-});
+})
 
 export function createLogger(options?: { prefix?: string }): Logger {
-  const prefix = options?.prefix;
+  const prefix = options?.prefix
 
-  let newLogger = logger.child();
+  let newLogger = logger.child()
   if (prefix) {
-    newLogger = newLogger.withPrefix(prefix);
+    newLogger = newLogger.withPrefix(prefix)
   }
-  return newLogger;
+  return newLogger
 }

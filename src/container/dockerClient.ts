@@ -1,16 +1,16 @@
-import Docker from "dockerode";
+import Docker from "dockerode"
 
 export type DockerClientOptions = {
-  socketPath?: string;
-  host?: string;
-  port?: number;
-  protocol?: "http" | "https";
-};
+  socketPath?: string
+  host?: string
+  port?: number
+  protocol?: "http" | "https"
+}
 
 export function createDockerClient(options: DockerClientOptions = {}): Docker {
-  const socketPath = options.socketPath ?? process.env.DOCKER_SOCKET;
+  const socketPath = options.socketPath ?? process.env.DOCKER_SOCKET
   if (socketPath) {
-    return new Docker({ socketPath });
+    return new Docker({ socketPath })
   }
 
   if (options.host || options.port || options.protocol) {
@@ -18,8 +18,8 @@ export function createDockerClient(options: DockerClientOptions = {}): Docker {
       host: options.host,
       port: options.port,
       protocol: options.protocol,
-    });
+    })
   }
 
-  return new Docker();
+  return new Docker()
 }

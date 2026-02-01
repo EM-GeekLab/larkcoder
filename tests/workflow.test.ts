@@ -1,82 +1,84 @@
-import { PassThrough } from "node:stream";
-import { describe, expect, it, vi } from "vitest";
-import type { AgentClient } from "../src/acp/acpClient.js";
-import type { ContainerOrchestratorClient } from "../src/container/orchestrator.js";
+import { PassThrough } from "node:stream"
+import { describe, expect, it, vi } from "vitest"
+import type { AgentClient } from "../src/acp/acpClient.js"
+import type { ContainerOrchestratorClient } from "../src/container/orchestrator.js"
 import {
   type AgentClientFactoryOptions,
   WorkflowOrchestrator,
-} from "../src/workflow/orchestrator.js";
-import { InMemoryStateStore } from "../src/workflow/store.js";
+} from "../src/workflow/orchestrator.js"
+import { InMemoryStateStore } from "../src/workflow/store.js"
 
 describe("WorkflowOrchestrator", () => {
   it("allows valid transitions", async () => {
-    const store = new InMemoryStateStore();
+    const store = new InMemoryStateStore()
     const orchestrator = new WorkflowOrchestrator(store, {
       containerOrchestrator: createContainerStub(),
       acpClientFactory: createAcpClientStub,
-    });
-    await orchestrator.createTask("task-1");
+    })
+    await orchestrator.createTask("task-1")
 
-    const planning = await orchestrator.transition("task-1", "Planning");
-    expect(planning.state).toBe("Planning");
+    const planning = await orchestrator.transition("task-1", "Planning")
+    expect(planning.state).toBe("Planning")
 
-    const coding = await orchestrator.transition("task-1", "Coding");
-    expect(coding.state).toBe("Coding");
+    const coding = await orchestrator.transition("task-1", "Coding")
+    expect(coding.state).toBe("Coding")
 
-    const completed = await orchestrator.transition("task-1", "Completed");
-    expect(completed.state).toBe("Completed");
-  });
+    const completed = await orchestrator.transition("task-1", "Completed")
+    expect(completed.state).toBe("Completed")
+  })
 
   it("rejects invalid transitions", async () => {
-    const store = new InMemoryStateStore();
+    const store = new InMemoryStateStore()
     const orchestrator = new WorkflowOrchestrator(store, {
       containerOrchestrator: createContainerStub(),
       acpClientFactory: createAcpClientStub,
-    });
-    await orchestrator.createTask("task-2");
+    })
+    await orchestrator.createTask("task-2")
 
     await expect(
       orchestrator.transition("task-2", "Completed"),
-    ).rejects.toThrow("Invalid transition");
-  });
+    ).rejects.toThrow("Invalid transition")
+  })
 
   it("includes telemetry summary in workflow cards", async () => {
-    const store = new InMemoryStateStore();
-    const postMessageCard = vi.fn(async () => undefined);
+    const store = new InMemoryStateStore()
+    const postMessageCard = vi.fn(async () => undefined)
     const larkClient = {
       postMessageCard,
-    } as unknown as import("../src/lark/larkClient.js").LarkClient;
+    } as unknown as import("../src/lark/larkClient.js").LarkClient
     const orchestrator = new WorkflowOrchestrator(store, {
       containerOrchestrator: createContainerStub(),
       acpClientFactory: createStreamingAcpClientStub,
       larkClient,
-    });
+    })
 
     await orchestrator.createTask("task-telemetry", {
       planContext: "Plan",
       messageCardReceiveId: "oc_1",
       messageCardReceiveIdType: "open_id",
-    });
+    })
 
-    await orchestrator.startCoding("task-telemetry");
+    await orchestrator.startCoding("task-telemetry")
 
-    await waitFor(() => postMessageCard.mock.calls.length > 1);
+    await waitFor(() => postMessageCard.mock.calls.length > 1)
     const calls = postMessageCard.mock.calls as unknown as Array<
       [{ card: Record<string, unknown> }]
-    >;
-    const lastCall = calls.length > 0 ? calls[calls.length - 1] : undefined;
-    const card = lastCall?.[0]?.card;
+    >
+    const lastCall = calls.length > 0 ? calls[calls.length - 1] : undefined
+    const card = lastCall?.[0]?.card
     if (!card) {
-      throw new Error("Expected Lark card update");
+      throw new Error("Expected Lark card update")
     }
     const elements = Array.isArray(card?.elements)
       ? (card?.elements as Array<Record<string, unknown>>)
-      : [];
-    const markdownElement = elements.find((element) => element.tag === "markdown");
-    const content = markdownElement?.content as string | undefined;
-    expect(content).toContain("**Activity:**");
-  });
-});
+      : []
+    const markdownElement = elements.find(
+      (element) => element.tag === "markdown",
+    )
+    const content = markdownElement?.content as string | undefined
+    expect(content).toContain("**Activity:**")
+  })
+})
 
 function createContainerStub(): ContainerOrchestratorClient {
   return {
@@ -91,7 +93,7 @@ function createContainerStub(): ContainerOrchestratorClient {
       stream: new PassThrough(),
       stop: () => undefined,
     }),
-  };
+  }
 }
 
 function createAcpClientStub(_options: AgentClientFactoryOptions): AgentClient {
@@ -103,7 +105,7 @@ function createAcpClientStub(_options: AgentClientFactoryOptions): AgentClient {
     toolCallResult: async () => ({}),
     agentCapabilities: undefined,
     clientCapabilities: undefined,
-  };
+  }
 }
 
 function createStreamingAcpClientStub(
@@ -119,14 +121,14 @@ function createStreamingAcpClientStub(
           sessionUpdate: "agent_message_chunk",
           content: { type: "text", text: "Working..." },
         },
-      });
-      return { stopReason: "end_turn" };
+      })
+      return { stopReason: "end_turn" }
     },
     interrupt: async () => undefined,
     toolCallResult: async () => ({}),
     agentCapabilities: undefined,
     clientCapabilities: undefined,
-  };
+  }
 }
 
 async function waitFor(
@@ -134,11 +136,11 @@ async function waitFor(
   timeoutMs = 2000,
   intervalMs = 20,
 ): Promise<void> {
-  const start = Date.now();
+  const start = Date.now()
   while (!predicate()) {
     if (Date.now() - start > timeoutMs) {
-      throw new Error("Timed out waiting for condition");
+      throw new Error("Timed out waiting for condition")
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
   }
 }

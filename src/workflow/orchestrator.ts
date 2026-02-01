@@ -1,22 +1,25 @@
-import type * as acp from "@agentclientprotocol/sdk";
-import type { AgentClient } from "../acp/acpClient.js";
-import type { ToolDefinition, ToolHandler } from "../acp/clientBridge.js";
+import type * as acp from "@agentclientprotocol/sdk"
+import type { AgentClient } from "../acp/acpClient.js"
+import type { ToolDefinition, ToolHandler } from "../acp/clientBridge.js"
 import type {
   AgentContainer,
   ContainerOrchestratorClient,
-} from "../container/orchestrator.js";
-import type { LarkClient } from "../lark/larkClient.js";
-import type { GithubWebhookEvent } from "../vcs/githubWebhook.js";
-import type { StateStore } from "./store.js";
+} from "../container/orchestrator.js"
+import type { LarkClient } from "../lark/larkClient.js"
+import type { GithubWebhookEvent } from "../vcs/githubWebhook.js"
+import type { StateStore } from "./store.js"
 import type {
   TaskData,
   TaskRecord,
   WorkflowLogEntry,
   WorkflowState,
-} from "./types.js";
-import { extractPlanFromMarkdown } from "../lark/docContext.js";
-import { buildWorkflowCard, type WorkflowTelemetry } from "../lark/messageCard.js";
-import { createLogger, type Logger } from "../utils/logger.js";
+} from "./types.js"
+import { extractPlanFromMarkdown } from "../lark/docContext.js"
+import {
+  buildWorkflowCard,
+  type WorkflowTelemetry,
+} from "../lark/messageCard.js"
+import { createLogger, type Logger } from "../utils/logger.js"
 
 const transitions: Record<WorkflowState, WorkflowState[]> = {
   Idle: ["Planning"],
@@ -24,103 +27,102 @@ const transitions: Record<WorkflowState, WorkflowState[]> = {
   Coding: ["Reviewing", "Completed"],
   Reviewing: ["Coding", "Completed"],
   Completed: [],
-};
+}
 
-const MAX_SOLO_TURNS = 5;
-const TELEMETRY_THROTTLE_MS = 2000;
+const MAX_SOLO_TURNS = 5
+const TELEMETRY_THROTTLE_MS = 2000
 
 type ActiveTask = {
-  taskId: string;
-  container: AgentContainer;
-  acpClient: AgentClient;
-  sessionId: string;
-  pendingPrompt?: PromptCollector;
-  stopLogStream?: () => void;
-  lastTelemetryAt?: number;
-  latestTelemetry?: WorkflowTelemetry;
-};
+  taskId: string
+  container: AgentContainer
+  acpClient: AgentClient
+  sessionId: string
+  pendingPrompt?: PromptCollector
+  stopLogStream?: () => void
+  lastTelemetryAt?: number
+  latestTelemetry?: WorkflowTelemetry
+}
 
 type PromptCollector = {
-  chunks: string[];
-};
+  chunks: string[]
+}
 
 export type AgentClientFactoryOptions = {
-  taskId: string;
-  data?: TaskData;
-  onSessionUpdate: (params: acp.SessionNotification) => Promise<void> | void;
-  toolDefinitions: ToolDefinition[];
-  toolHandlers: Record<string, ToolHandler>;
-};
+  taskId: string
+  data?: TaskData
+  onSessionUpdate: (params: acp.SessionNotification) => Promise<void> | void
+  toolDefinitions: ToolDefinition[]
+  toolHandlers: Record<string, ToolHandler>
+}
 
 export type AgentClientFactory = (
   options: AgentClientFactoryOptions,
-) => AgentClient;
+) => AgentClient
 
 export type WorkflowOrchestratorOptions = {
-  containerOrchestrator: ContainerOrchestratorClient;
-  acpClientFactory: AgentClientFactory;
-  larkClient?: LarkClient;
-  mcpServerBaseUrl?: string;
+  containerOrchestrator: ContainerOrchestratorClient
+  acpClientFactory: AgentClientFactory
+  larkClient?: LarkClient
+  mcpServerBaseUrl?: string
   githubClient?: {
     createPullRequest: (request: {
-      title: string;
-      body?: string;
-      head: string;
-      base: string;
-      draft?: boolean;
-      repository?: string;
-    }) => Promise<{ url: string }>;
-    defaultBaseBranch?: string;
-  };
-  logger?: Logger;
-};
+      title: string
+      body?: string
+      head: string
+      base: string
+      draft?: boolean
+      repository?: string
+    }) => Promise<{ url: string }>
+    defaultBaseBranch?: string
+  }
+  logger?: Logger
+}
 
 export class WorkflowOrchestrator {
-  private logger: Logger;
-  private activeTasks = new Map<string, ActiveTask>();
+  private logger: Logger
+  private activeTasks = new Map<string, ActiveTask>()
 
   constructor(
     private store: StateStore,
     private options: WorkflowOrchestratorOptions,
   ) {
-    this.logger = options.logger ?? createLogger({ prefix: "WorkflowOrchestrator" });
+    this.logger =
+      options.logger ?? createLogger({ prefix: "WorkflowOrchestrator" })
   }
 
   async createTask(taskId: string, data?: TaskData): Promise<TaskRecord> {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString()
     const record: TaskRecord = {
       taskId,
       state: "Idle",
       createdAt: now,
       updatedAt: now,
-    };
-
-    if (data) {
-      record.data = data;
     }
 
-    await this.store.set(record);
-    return record;
+    if (data) {
+      record.data = data
+    }
+
+    await this.store.set(record)
+    return record
   }
 
   async getTask(taskId: string): Promise<TaskRecord | null> {
-    return await this.store.get(taskId);
+    return await this.store.get(taskId)
   }
 
   async resolveTaskIdByDocToken(docToken: string): Promise<string | null> {
-    return (await this.store.getTaskIdByDocToken?.(docToken)) ?? null;
+    return (await this.store.getTaskIdByDocToken?.(docToken)) ?? null
   }
 
   async transition(
     taskId: string,
     nextState: WorkflowState,
   ): Promise<TaskRecord> {
-    const record = await this.requireTask(taskId);
-    const allowed = transitions[record.state];
+    const record = await this.requireTask(taskId)
+    const allowed = transitions[record.state]
     if (!allowed.includes(nextState)) {
-      throw new Error(
-        `Invalid transition from ${record.state} to ${nextState}`,
-      );
+      throw new Error(`Invalid transition from ${record.state} to ${nextState}`)
     }
 
     const updated = await this.updateTask(
@@ -129,12 +131,12 @@ export class WorkflowOrchestrator {
         ...data,
       }),
       nextState,
-    );
+    )
 
     this.logger
       .withMetadata({ taskId, from: record.state, to: nextState })
-      .info("Workflow transition");
-    return updated;
+      .info("Workflow transition")
+    return updated
   }
 
   async handleDocContext(
@@ -145,23 +147,23 @@ export class WorkflowOrchestrator {
     const record = await this.ensureTask(
       taskId,
       docToken ? { docToken } : undefined,
-    );
-    const planContext = extractPlanFromMarkdown(markdown);
+    )
+    const planContext = extractPlanFromMarkdown(markdown)
 
     const updated = await this.updateTask(taskId, (data) => ({
       ...data,
       docToken: docToken ?? data.docToken,
       planMarkdown: markdown,
       planContext,
-    }));
+    }))
     if (docToken) {
-      await this.store.setDocTokenMapping?.(docToken, taskId);
+      await this.store.setDocTokenMapping?.(docToken, taskId)
     }
 
-    let state = updated.state;
+    let state = updated.state
     if (record.state === "Idle") {
-      const transitioned = await this.transition(taskId, "Planning");
-      state = transitioned.state;
+      const transitioned = await this.transition(taskId, "Planning")
+      state = transitioned.state
     }
 
     await this.sendWorkflowCard(
@@ -170,46 +172,45 @@ export class WorkflowOrchestrator {
       planContext,
       updated.data?.pr?.url,
       this.activeTasks.get(taskId)?.latestTelemetry,
-    );
-    return updated;
+    )
+    return updated
   }
 
   async handleLarkComment(
     taskId: string,
     comment: string,
   ): Promise<string | null> {
-    const record = await this.ensureTask(taskId);
-    const planContext = record.data?.planContext ?? record.data?.planMarkdown;
-    const prompt = buildCommentPrompt(planContext, comment);
+    const record = await this.ensureTask(taskId)
+    const planContext = record.data?.planContext ?? record.data?.planMarkdown
+    const prompt = buildCommentPrompt(planContext, comment)
 
-    const active = await this.ensureSession(taskId);
-    const { responseText } = await this.runPrompt(taskId, active, prompt);
+    const active = await this.ensureSession(taskId)
+    const { responseText } = await this.runPrompt(taskId, active, prompt)
 
-    return responseText.trim().length > 0 ? responseText : null;
+    return responseText.trim().length > 0 ? responseText : null
   }
 
   async startCoding(taskId: string): Promise<TaskRecord> {
-    const record = await this.ensureTask(taskId);
-    const planContext = record.data?.planContext ?? record.data?.planMarkdown;
+    const record = await this.ensureTask(taskId)
+    const planContext = record.data?.planContext ?? record.data?.planMarkdown
     if (!planContext) {
-      throw new Error("Plan context missing for coding session");
+      throw new Error("Plan context missing for coding session")
     }
 
-    const active = await this.ensureSession(taskId);
+    const active = await this.ensureSession(taskId)
     if (record.state === "Idle") {
-      await this.transition(taskId, "Planning");
+      await this.transition(taskId, "Planning")
     }
-    await this.transitionIfAllowed(taskId, "Coding");
-
+    await this.transitionIfAllowed(taskId, "Coding")
 
     await this.sendWorkflowCard(
       taskId,
       "Coding",
       planContext,
       record.data?.pr?.url,
-    );
-    void this.runSoloLoop(taskId, active, planContext);
-    return await this.requireTask(taskId);
+    )
+    void this.runSoloLoop(taskId, active, planContext)
+    return await this.requireTask(taskId)
   }
 
   async handleGithubEvent(event: GithubWebhookEvent): Promise<void> {
@@ -218,9 +219,9 @@ export class WorkflowOrchestrator {
       event.type === "check_suite" ||
       event.type === "status"
     ) {
-      const task = await this.findTaskByBranch(event.headRef);
+      const task = await this.findTaskByBranch(event.headRef)
       if (!task) {
-        return;
+        return
       }
       await this.updateTask(task.taskId, (data) => ({
         ...data,
@@ -229,8 +230,8 @@ export class WorkflowOrchestrator {
           conclusion: event.conclusion,
           updatedAt: new Date().toISOString(),
         },
-      }));
-      return;
+      }))
+      return
     }
 
     if (
@@ -239,66 +240,66 @@ export class WorkflowOrchestrator {
       event.type !== "issue_comment"
     ) {
       if (event.type === "push") {
-        const task = await this.findTaskByBranch(event.headRef);
+        const task = await this.findTaskByBranch(event.headRef)
         if (!task || task.data?.pr?.url) {
-          return;
+          return
         }
         await this.handlePullRequestRequest(task.taskId, {
           base: task.data?.githubBaseBranch,
           head: task.data?.branchName ?? task.data?.githubHeadBranch,
           repository: task.data?.githubRepository,
-        });
+        })
       }
-      return;
+      return
     }
 
-    const feedback = event.body?.trim();
+    const feedback = event.body?.trim()
     if (!feedback) {
-      return;
+      return
     }
 
-    const task = await this.findTaskByBranch(event.headRef);
+    const task = await this.findTaskByBranch(event.headRef)
     if (!task) {
       this.logger
         .withMetadata({ eventType: event.type })
-        .warn("No task matched GitHub event");
-      return;
+        .warn("No task matched GitHub event")
+      return
     }
 
-    await this.transitionIfAllowed(task.taskId, "Reviewing");
-    const active = await this.ensureSession(task.taskId);
-    const prompt = buildReviewPrompt(feedback, event);
-    void this.runSoloLoop(task.taskId, active, prompt);
+    await this.transitionIfAllowed(task.taskId, "Reviewing")
+    const active = await this.ensureSession(task.taskId)
+    const prompt = buildReviewPrompt(feedback, event)
+    void this.runSoloLoop(task.taskId, active, prompt)
   }
 
   async shutdownTask(taskId: string): Promise<void> {
-    const active = this.activeTasks.get(taskId);
+    const active = this.activeTasks.get(taskId)
     if (!active) {
-      return;
+      return
     }
 
-    active.stopLogStream?.();
-    await this.options.containerOrchestrator.stopAgent(active.container.name);
-    this.activeTasks.delete(taskId);
+    active.stopLogStream?.()
+    await this.options.containerOrchestrator.stopAgent(active.container.name)
+    this.activeTasks.delete(taskId)
   }
 
   private async ensureTask(
     taskId: string,
     data?: TaskData,
   ): Promise<TaskRecord> {
-    const existing = await this.store.get(taskId);
+    const existing = await this.store.get(taskId)
     if (existing) {
-      return existing;
+      return existing
     }
-    return await this.createTask(taskId, data);
+    return await this.createTask(taskId, data)
   }
 
   private async requireTask(taskId: string): Promise<TaskRecord> {
-    const record = await this.store.get(taskId);
+    const record = await this.store.get(taskId)
     if (!record) {
-      throw new Error(`Task ${taskId} not found`);
+      throw new Error(`Task ${taskId} not found`)
     }
-    return record;
+    return record
   }
 
   private async updateTask(
@@ -306,42 +307,42 @@ export class WorkflowOrchestrator {
     update: (data: TaskData) => TaskData,
     nextState?: WorkflowState,
   ): Promise<TaskRecord> {
-    const record = await this.requireTask(taskId);
-    const now = new Date().toISOString();
+    const record = await this.requireTask(taskId)
+    const now = new Date().toISOString()
     const updated: TaskRecord = {
       ...record,
       state: nextState ?? record.state,
       updatedAt: now,
       data: update(record.data ?? {}),
-    };
-    await this.store.set(updated);
-    return updated;
+    }
+    await this.store.set(updated)
+    return updated
   }
 
   private async transitionIfAllowed(
     taskId: string,
     nextState: WorkflowState,
   ): Promise<void> {
-    const record = await this.requireTask(taskId);
+    const record = await this.requireTask(taskId)
     if (record.state === nextState) {
-      return;
+      return
     }
 
-    const allowed = transitions[record.state];
+    const allowed = transitions[record.state]
     if (!allowed.includes(nextState)) {
-      return;
+      return
     }
 
-    await this.transition(taskId, nextState);
+    await this.transition(taskId, nextState)
   }
 
   private async ensureSession(taskId: string): Promise<ActiveTask> {
-    const existing = this.activeTasks.get(taskId);
+    const existing = this.activeTasks.get(taskId)
     if (existing) {
-      return existing;
+      return existing
     }
 
-    const record = await this.requireTask(taskId);
+    const record = await this.requireTask(taskId)
     const container = await this.options.containerOrchestrator.launchAgent({
       taskId,
       repoUrl: record.data?.repoUrl,
@@ -349,14 +350,14 @@ export class WorkflowOrchestrator {
       authVolume: record.data?.authVolume,
       agentConfig: record.data?.agentConfig,
       variables: record.data?.variables,
-    });
+    })
 
-    const { toolDefinitions, toolHandlers } = this.buildToolRegistry(taskId);
+    const { toolDefinitions, toolHandlers } = this.buildToolRegistry(taskId)
     const mcpServers = buildMcpServers(
       taskId,
       toolDefinitions,
       this.options.mcpServerBaseUrl,
-    );
+    )
     const acpClient = this.options.acpClientFactory({
       taskId,
       data: {
@@ -367,22 +368,22 @@ export class WorkflowOrchestrator {
       onSessionUpdate: (params) => this.handleSessionUpdate(taskId, params),
       toolDefinitions,
       toolHandlers,
-    });
+    })
 
-    await acpClient.initialize();
+    await acpClient.initialize()
     const session = await acpClient.newSession({
       cwd: container.workingDir ?? record.data?.workingDir ?? "/",
       mcpServers,
-    });
+    })
 
     const active: ActiveTask = {
       taskId,
       container,
       acpClient,
       sessionId: session.sessionId,
-    };
+    }
 
-    this.activeTasks.set(taskId, active);
+    this.activeTasks.set(taskId, active)
 
     await this.updateTask(taskId, (data) => ({
       ...data,
@@ -394,10 +395,10 @@ export class WorkflowOrchestrator {
       sessionId: session.sessionId,
       agentCapabilities: acpClient.agentCapabilities,
       clientCapabilities: acpClient.clientCapabilities,
-    }));
+    }))
 
-    await this.attachContainerLogs(taskId, container);
-    return active;
+    await this.attachContainerLogs(taskId, container)
+    return active
   }
 
   private async attachContainerLogs(
@@ -407,31 +408,31 @@ export class WorkflowOrchestrator {
     try {
       const handle = await this.options.containerOrchestrator.streamAgentLogs(
         container.name,
-      );
+      )
       handle.stream.on("data", (chunk) => {
-        const text = chunk.toString().trim();
+        const text = chunk.toString().trim()
         if (!text) {
-          return;
+          return
         }
         this.logger
           .withMetadata({ taskId, container: container.name })
-          .info(text);
-      });
-      const active = this.activeTasks.get(taskId);
+          .info(text)
+      })
+      const active = this.activeTasks.get(taskId)
       if (active) {
-        active.stopLogStream = handle.stop;
+        active.stopLogStream = handle.stop
       }
     } catch (error) {
       this.logger
         .withMetadata({ taskId })
         .withError(error)
-        .warn("Failed to stream container logs");
+        .warn("Failed to stream container logs")
     }
   }
 
   private buildToolRegistry(taskId: string): {
-    toolDefinitions: ToolDefinition[];
-    toolHandlers: Record<string, ToolHandler>;
+    toolDefinitions: ToolDefinition[]
+    toolHandlers: Record<string, ToolHandler>
   } {
     const toolDefinitions: ToolDefinition[] = [
       {
@@ -440,25 +441,25 @@ export class WorkflowOrchestrator {
           "Request the orchestrator to create or record a pull request",
         inputSchema: {
           type: "object",
-            properties: {
-              url: { type: "string" },
-              title: { type: "string" },
-              body: { type: "string" },
-              draft: { type: "boolean" },
-              head: { type: "string" },
-              base: { type: "string" },
-              repository: { type: "string" },
-              head_branch: { type: "string" },
-              base_branch: { type: "string" },
-            },
+          properties: {
+            url: { type: "string" },
+            title: { type: "string" },
+            body: { type: "string" },
+            draft: { type: "boolean" },
+            head: { type: "string" },
+            base: { type: "string" },
+            repository: { type: "string" },
+            head_branch: { type: "string" },
+            base_branch: { type: "string" },
           },
         },
-    ];
+      },
+    ]
 
     const toolHandlers: Record<string, ToolHandler> = {
       create_pr: async (request) =>
         this.handlePullRequestRequest(taskId, request.arguments ?? {}),
-    };
+    }
 
     if (this.options.larkClient) {
       toolDefinitions.push(
@@ -487,60 +488,59 @@ export class WorkflowOrchestrator {
             },
           },
         },
-      );
+      )
 
       toolHandlers["lark.post_comment"] = async (request) =>
-        await this.handleLarkCommentTool(taskId, request.arguments ?? {});
+        await this.handleLarkCommentTool(taskId, request.arguments ?? {})
       toolHandlers["lark.post_card"] = async (request) =>
-        await this.handleLarkCardTool(request.arguments ?? {});
+        await this.handleLarkCardTool(request.arguments ?? {})
     }
 
-    return { toolDefinitions, toolHandlers };
+    return { toolDefinitions, toolHandlers }
   }
 
   private async handlePullRequestRequest(
     taskId: string,
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const url = typeof args.url === "string" ? args.url : undefined;
-    const title = typeof args.title === "string" ? args.title : undefined;
-    const body = typeof args.body === "string" ? args.body : undefined;
-    const draft = typeof args.draft === "boolean" ? args.draft : undefined;
-    const base = typeof args.base === "string" ? args.base : undefined;
-    const head = typeof args.head === "string" ? args.head : undefined;
+    const url = typeof args.url === "string" ? args.url : undefined
+    const title = typeof args.title === "string" ? args.title : undefined
+    const body = typeof args.body === "string" ? args.body : undefined
+    const draft = typeof args.draft === "boolean" ? args.draft : undefined
+    const base = typeof args.base === "string" ? args.base : undefined
+    const head = typeof args.head === "string" ? args.head : undefined
     const repository =
-      typeof args.repository === "string" ? args.repository : undefined;
+      typeof args.repository === "string" ? args.repository : undefined
     const headBranch =
-      typeof args.head_branch === "string" ? args.head_branch : undefined;
+      typeof args.head_branch === "string" ? args.head_branch : undefined
     const baseBranch =
-      typeof args.base_branch === "string" ? args.base_branch : undefined;
+      typeof args.base_branch === "string" ? args.base_branch : undefined
 
-    const record = await this.requireTask(taskId);
-    const now = new Date().toISOString();
-     const baseBranchValue =
-       base ?? baseBranch ?? record.data?.githubBaseBranch;
-     const fallbackBase = this.options.githubClient?.defaultBaseBranch;
-     const resolvedBase = baseBranchValue ?? fallbackBase;
-     await this.updateTask(taskId, (data) => ({
-       ...data,
-       githubRepository: repository ?? data.githubRepository,
-       githubHeadBranch: head ?? headBranch ?? data.githubHeadBranch,
-       githubBaseBranch: resolvedBase ?? data.githubBaseBranch,
-       pr: {
-         url,
-         requestedAt: now,
-         status: "requested",
-       },
-     }));
+    const record = await this.requireTask(taskId)
+    const now = new Date().toISOString()
+    const baseBranchValue = base ?? baseBranch ?? record.data?.githubBaseBranch
+    const fallbackBase = this.options.githubClient?.defaultBaseBranch
+    const resolvedBase = baseBranchValue ?? fallbackBase
+    await this.updateTask(taskId, (data) => ({
+      ...data,
+      githubRepository: repository ?? data.githubRepository,
+      githubHeadBranch: head ?? headBranch ?? data.githubHeadBranch,
+      githubBaseBranch: resolvedBase ?? data.githubBaseBranch,
+      pr: {
+        url,
+        requestedAt: now,
+        status: "requested",
+      },
+    }))
 
-     let prUrl = url;
-     if (!prUrl && this.options.githubClient) {
+    let prUrl = url
+    if (!prUrl && this.options.githubClient) {
       const headRef =
         head ??
         headBranch ??
         record.data?.branchName ??
-        record.data?.githubHeadBranch;
-       const baseRef = resolvedBase;
+        record.data?.githubHeadBranch
+      const baseRef = resolvedBase
       if (headRef && baseRef) {
         try {
           const request = {
@@ -550,9 +550,10 @@ export class WorkflowOrchestrator {
             base: baseRef,
             ...(repository ? { repository } : {}),
             ...(draft !== undefined ? { draft } : {}),
-          };
-          const created = await this.options.githubClient.createPullRequest(request);
-          prUrl = created.url;
+          }
+          const created =
+            await this.options.githubClient.createPullRequest(request)
+          prUrl = created.url
           await this.updateTask(taskId, (data) => ({
             ...data,
             pr: {
@@ -560,9 +561,9 @@ export class WorkflowOrchestrator {
               requestedAt: now,
               status: "created",
             },
-          }));
+          }))
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message = error instanceof Error ? error.message : String(error)
           await this.updateTask(taskId, (data) => ({
             ...data,
             pr: {
@@ -571,60 +572,60 @@ export class WorkflowOrchestrator {
               status: "failed",
               error: message,
             },
-          }));
+          }))
         }
       }
     }
 
-    await this.transitionIfAllowed(taskId, "Reviewing");
+    await this.transitionIfAllowed(taskId, "Reviewing")
     await this.sendWorkflowCard(
       taskId,
       "Reviewing",
       undefined,
       prUrl,
       this.activeTasks.get(taskId)?.latestTelemetry,
-    );
-    await this.shutdownTask(taskId);
-    return { ok: true, url: prUrl, title };
+    )
+    await this.shutdownTask(taskId)
+    return { ok: true, url: prUrl, title }
   }
 
   private async handleLarkCommentTool(
     taskId: string,
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const larkClient = this.options.larkClient;
+    const larkClient = this.options.larkClient
     if (!larkClient) {
-      throw new Error("Lark is not configured");
+      throw new Error("Lark is not configured")
     }
 
-    const record = await this.requireTask(taskId);
+    const record = await this.requireTask(taskId)
     const docToken =
-      typeof args.docToken === "string" ? args.docToken : record.data?.docToken;
+      typeof args.docToken === "string" ? args.docToken : record.data?.docToken
     if (!docToken) {
-      throw new Error("docToken is required for lark.post_comment");
+      throw new Error("docToken is required for lark.post_comment")
     }
 
-    const content = typeof args.content === "string" ? args.content : undefined;
+    const content = typeof args.content === "string" ? args.content : undefined
     if (!content) {
-      throw new Error("content is required for lark.post_comment");
+      throw new Error("content is required for lark.post_comment")
     }
 
     const commentId =
-      typeof args.commentId === "string" ? args.commentId : undefined;
+      typeof args.commentId === "string" ? args.commentId : undefined
     await larkClient.postDocComment({
       docToken,
       payload: buildCommentPayload(content, commentId),
-    });
+    })
 
-    return { ok: true };
+    return { ok: true }
   }
 
   private async handleLarkCardTool(
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const larkClient = this.options.larkClient;
+    const larkClient = this.options.larkClient
     if (!larkClient) {
-      throw new Error("Lark is not configured");
+      throw new Error("Lark is not configured")
     }
 
     const card = isRecord(args.payload)
@@ -632,16 +633,18 @@ export class WorkflowOrchestrator {
       : buildWorkflowCard({
           taskId: "unknown",
           state: "Planning",
-        });
-    const url = typeof args.url === "string" ? args.url : undefined;
+        })
+    const url = typeof args.url === "string" ? args.url : undefined
 
     const receiveId =
-      typeof args.receive_id === "string" ? args.receive_id : undefined;
+      typeof args.receive_id === "string" ? args.receive_id : undefined
     const receiveIdType =
-      typeof args.receive_id_type === "string" ? args.receive_id_type : undefined;
+      typeof args.receive_id_type === "string"
+        ? args.receive_id_type
+        : undefined
 
-    await larkClient.postMessageCard({ card, url, receiveId, receiveIdType });
-    return { ok: true };
+    await larkClient.postMessageCard({ card, url, receiveId, receiveIdType })
+    return { ok: true }
   }
 
   private async runSoloLoop(
@@ -649,18 +652,18 @@ export class WorkflowOrchestrator {
     active: ActiveTask,
     initialPrompt: string,
   ): Promise<void> {
-    let prompt = initialPrompt;
+    let prompt = initialPrompt
     for (let turn = 0; turn < MAX_SOLO_TURNS; turn += 1) {
-      const { stopReason } = await this.runPrompt(taskId, active, prompt);
+      const { stopReason } = await this.runPrompt(taskId, active, prompt)
       if (stopReason === "end_turn") {
         await this.appendLog(taskId, {
           at: new Date().toISOString(),
           type: "system",
           message: "Agent completed turn",
-        });
-        const record = await this.requireTask(taskId);
+        })
+        const record = await this.requireTask(taskId)
         if (!record.data?.pr) {
-          await this.handlePullRequestRequest(taskId, {});
+          await this.handlePullRequestRequest(taskId, {})
         } else if (record.data.pr.url) {
           await this.sendWorkflowCard(
             taskId,
@@ -668,9 +671,9 @@ export class WorkflowOrchestrator {
             undefined,
             record.data.pr.url,
             this.activeTasks.get(taskId)?.latestTelemetry,
-          );
+          )
         }
-        break;
+        break
       }
 
       if (stopReason === "refusal" || stopReason === "cancelled") {
@@ -678,11 +681,11 @@ export class WorkflowOrchestrator {
           at: new Date().toISOString(),
           type: "error",
           message: `Agent stopped with ${stopReason}`,
-        });
-        break;
+        })
+        break
       }
 
-      prompt = "continue";
+      prompt = "continue"
     }
   }
 
@@ -691,8 +694,8 @@ export class WorkflowOrchestrator {
     active: ActiveTask,
     prompt: string,
   ): Promise<{ stopReason: acp.StopReason; responseText: string }> {
-    const collector: PromptCollector = { chunks: [] };
-    active.pendingPrompt = collector;
+    const collector: PromptCollector = { chunks: [] }
+    active.pendingPrompt = collector
 
     try {
       const response = await active.acpClient.sendPrompt({
@@ -703,19 +706,19 @@ export class WorkflowOrchestrator {
             text: prompt,
           },
         ],
-      });
+      })
 
       return {
         stopReason: response.stopReason,
         responseText: collector.chunks.join(""),
-      };
+      }
     } finally {
-      active.pendingPrompt = undefined;
+      active.pendingPrompt = undefined
       await this.appendLog(taskId, {
         at: new Date().toISOString(),
         type: "system",
         message: "Prompt completed",
-      });
+      })
     }
   }
 
@@ -723,66 +726,66 @@ export class WorkflowOrchestrator {
     taskId: string,
     params: acp.SessionNotification,
   ): Promise<void> {
-    const update = params.update;
-    const active = this.activeTasks.get(taskId);
+    const update = params.update
+    const active = this.activeTasks.get(taskId)
     if (!active || params.sessionId !== active.sessionId) {
-      return;
+      return
     }
 
     switch (update.sessionUpdate) {
       case "agent_message_chunk": {
-        const text = extractChunkText(update);
+        const text = extractChunkText(update)
         if (text) {
-          active.pendingPrompt?.chunks.push(text);
+          active.pendingPrompt?.chunks.push(text)
           await this.updateTelemetry(taskId, active, {
             summary: `Assistant: ${truncate(text, 120)}`,
-          });
+          })
         }
         await this.appendLog(
           taskId,
           buildLogEntry("agent_message", update, text),
-        );
-        break;
+        )
+        break
       }
       case "agent_thought_chunk": {
-        const text = extractChunkText(update);
+        const text = extractChunkText(update)
         if (text) {
           await this.updateTelemetry(taskId, active, {
             summary: `Thought: ${truncate(text, 120)}`,
-          });
+          })
         }
         await this.appendLog(
           taskId,
           buildLogEntry("agent_thought", update, text),
-        );
-        break;
+        )
+        break
       }
       case "tool_call": {
         await this.updateTelemetry(taskId, active, {
           summary: `Tool: ${update.title ?? update.toolCallId}`,
-        });
-        await this.appendLog(taskId, buildToolLog("tool_call", update));
-        break;
+        })
+        await this.appendLog(taskId, buildToolLog("tool_call", update))
+        break
       }
       case "tool_call_update": {
         if (update.status) {
           await this.updateTelemetry(taskId, active, {
             summary: `Tool ${update.status}: ${update.toolCallId}`,
-          });
+          })
         }
-        await this.appendLog(taskId, buildToolLog("tool_call_update", update));
-        break;
+        await this.appendLog(taskId, buildToolLog("tool_call_update", update))
+        break
       }
       case "plan": {
-        await this.appendLog(taskId, buildPlanLog(update));
-        break;
+        await this.appendLog(taskId, buildPlanLog(update))
+        break
       }
       default:
         await this.appendLog(taskId, {
           at: new Date().toISOString(),
           type: "system",
           message: `Session update: ${update.sessionUpdate}`,
-        });
+        })
     }
   }
 
@@ -793,10 +796,10 @@ export class WorkflowOrchestrator {
     await this.updateTask(taskId, (data) => ({
       ...data,
       logs: [...(data.logs ?? []), entry],
-    }));
+    }))
 
     if (entry.type === "error") {
-      const record = await this.store.get(taskId);
+      const record = await this.store.get(taskId)
       if (record) {
         await this.sendWorkflowCard(
           taskId,
@@ -804,7 +807,7 @@ export class WorkflowOrchestrator {
           record.data?.planContext,
           record.data?.pr?.url,
           this.activeTasks.get(taskId)?.latestTelemetry,
-        );
+        )
       }
     }
   }
@@ -816,36 +819,36 @@ export class WorkflowOrchestrator {
     prUrl?: string,
     telemetry?: WorkflowTelemetry,
   ): Promise<void> {
-    const larkClient = this.options.larkClient;
+    const larkClient = this.options.larkClient
     if (!larkClient) {
-      return;
+      return
     }
 
-    const card = buildWorkflowCard({ taskId, state, summary, prUrl, telemetry });
-    const record = await this.store.get(taskId);
-    const variables: Record<string, string> = { TASK_ID: taskId };
+    const card = buildWorkflowCard({ taskId, state, summary, prUrl, telemetry })
+    const record = await this.store.get(taskId)
+    const variables: Record<string, string> = { TASK_ID: taskId }
     if (record?.data?.docToken) {
-      variables.DOC_TOKEN = record.data.docToken;
+      variables.DOC_TOKEN = record.data.docToken
     }
     await larkClient.postMessageCard({
       card,
       variables,
       receiveId: record?.data?.messageCardReceiveId,
       receiveIdType: record?.data?.messageCardReceiveIdType,
-    });
+    })
   }
 
   private async findTaskByBranch(
     branchName?: string,
   ): Promise<TaskRecord | null> {
     if (!branchName) {
-      return null;
+      return null
     }
 
-    const tasks = await this.store.list();
+    const tasks = await this.store.list()
     return (
       tasks.find((record) => record.data?.branchName === branchName) ?? null
-    );
+    )
   }
 
   private async updateTelemetry(
@@ -853,18 +856,18 @@ export class WorkflowOrchestrator {
     active: ActiveTask,
     telemetry: WorkflowTelemetry,
   ): Promise<void> {
-    const now = Date.now();
-    active.latestTelemetry = telemetry;
+    const now = Date.now()
+    active.latestTelemetry = telemetry
     if (
       active.lastTelemetryAt &&
       now - active.lastTelemetryAt < TELEMETRY_THROTTLE_MS
     ) {
-      return;
+      return
     }
-    active.lastTelemetryAt = now;
-    const record = await this.store.get(taskId);
+    active.lastTelemetryAt = now
+    const record = await this.store.get(taskId)
     if (!record) {
-      return;
+      return
     }
     await this.sendWorkflowCard(
       taskId,
@@ -872,15 +875,15 @@ export class WorkflowOrchestrator {
       record.data?.planContext,
       record.data?.pr?.url,
       telemetry,
-    );
+    )
   }
 
   async getToolRegistry(taskId: string): Promise<{
-    toolDefinitions: ToolDefinition[];
-    toolHandlers: Record<string, ToolHandler>;
+    toolDefinitions: ToolDefinition[]
+    toolHandlers: Record<string, ToolHandler>
   }> {
-    await this.requireTask(taskId);
-    return this.buildToolRegistry(taskId);
+    await this.requireTask(taskId)
+    return this.buildToolRegistry(taskId)
   }
 }
 
@@ -889,9 +892,9 @@ function buildCommentPrompt(
   comment: string,
 ): string {
   if (planContext) {
-    return `Plan context:\n${planContext}\n\nComment:\n${comment}`;
+    return `Plan context:\n${planContext}\n\nComment:\n${comment}`
   }
-  return `Comment:\n${comment}`;
+  return `Comment:\n${comment}`
 }
 
 function buildReviewPrompt(
@@ -902,19 +905,19 @@ function buildReviewPrompt(
       type:
         | "pull_request_review"
         | "pull_request_review_comment"
-        | "issue_comment";
+        | "issue_comment"
     }
   >,
 ): string {
-  const location = event.pullRequestUrl ? `PR: ${event.pullRequestUrl}\n` : "";
-  return `${location}Review feedback:\n${comment}`;
+  const location = event.pullRequestUrl ? `PR: ${event.pullRequestUrl}\n` : ""
+  return `${location}Review feedback:\n${comment}`
 }
 
 function extractChunkText(update: acp.ContentChunk): string | undefined {
   if (update.content.type !== "text") {
-    return undefined;
+    return undefined
   }
-  return update.content.text;
+  return update.content.text
 }
 
 function buildLogEntry(
@@ -929,7 +932,7 @@ function buildLogEntry(
     data: {
       contentType: update.content.type,
     },
-  };
+  }
 }
 
 function buildToolLog(
@@ -945,7 +948,7 @@ function buildToolLog(
       status: update.status ?? "unknown",
       kind: update.kind ?? "unknown",
     },
-  };
+  }
 }
 
 function buildPlanLog(update: acp.Plan): WorkflowLogEntry {
@@ -955,14 +958,14 @@ function buildPlanLog(update: acp.Plan): WorkflowLogEntry {
     data: {
       entries: update.entries,
     },
-  };
+  }
 }
 
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) {
-    return text;
+    return text
   }
-  return `${text.slice(0, maxLength - 1)}…`;
+  return `${text.slice(0, maxLength - 1)}…`
 }
 
 function buildCommentPayload(
@@ -978,16 +981,16 @@ function buildCommentPayload(
         },
       ],
     },
-  };
+  }
 
   if (commentId) {
     return {
       comment_id: commentId,
       reply_list: { replies: [reply] },
-    };
+    }
   }
 
-  return { reply_list: { replies: [reply] } };
+  return { reply_list: { replies: [reply] } }
 }
 
 function buildMcpServers(
@@ -995,16 +998,16 @@ function buildMcpServers(
   tools: ToolDefinition[],
   baseUrl?: string,
 ): Array<{
-  type: "http";
-  name: string;
-  url: string;
-  headers: Array<{ name: string; value: string }>;
+  type: "http"
+  name: string
+  url: string
+  headers: Array<{ name: string; value: string }>
 }> {
   if (!baseUrl || tools.length === 0) {
-    return [];
+    return []
   }
 
-  const url = `${baseUrl.replace(/\/$/, "")}/mcp/${taskId}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/mcp/${taskId}`
   return [
     {
       type: "http",
@@ -1012,9 +1015,9 @@ function buildMcpServers(
       url,
       headers: [],
     },
-  ];
+  ]
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }

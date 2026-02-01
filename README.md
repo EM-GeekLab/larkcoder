@@ -21,13 +21,13 @@ AutoCoder Orchestrator coordinates agent containers, ACP sessions, and workflow 
 
 ## Setup
 
-1) Install dependencies
+1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-2) Create `config.yaml`
+2. Create `config.yaml`
 
 ```yaml
 agent_runtime:
@@ -83,7 +83,7 @@ github:
   api_base_url: "https://api.github.com"
 ```
 
-3) Start the server
+3. Start the server
 
 ```bash
 pnpm dev
@@ -144,11 +144,11 @@ The handler responds to the verification challenge automatically.
 
 ## Workflow Usage
 
-1) Lark doc update triggers Planning and stores plan context.
-2) Card action `start_coding` triggers Coding and starts an ACP session.
-3) The SOLO loop streams logs from ACP session updates.
-4) Agent `create_pr` tool requests transition to Reviewing and posts PR info.
-5) GitHub review comments re-trigger Coding with review feedback.
+1. Lark doc update triggers Planning and stores plan context.
+2. Card action `start_coding` triggers Coding and starts an ACP session.
+3. The SOLO loop streams logs from ACP session updates.
+4. Agent `create_pr` tool requests transition to Reviewing and posts PR info.
+5. GitHub review comments re-trigger Coding with review feedback.
 
 ## Commands
 

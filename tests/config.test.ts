@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { appConfigSchema, type RawConfig } from "../src/config/types.js";
+import { describe, expect, it } from "vitest"
+import { appConfigSchema, type RawConfig } from "../src/config/types.js"
 
 describe("appConfigSchema", () => {
   it("maps raw config into app config", () => {
@@ -30,7 +30,8 @@ describe("appConfigSchema", () => {
       lark: {
         app_id: "app",
         app_secret: "secret",
-        token_url: "https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal",
+        token_url:
+          "https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal",
         comment_url_template: "/open-apis/drive/v1/files/{DOC_TOKEN}/comments",
         comment_file_type: "docx",
         message_card_url_template: "/open-apis/im/v1/messages",
@@ -40,24 +41,28 @@ describe("appConfigSchema", () => {
         doc_token_type: "auto",
         wiki_node_url_template: "/open-apis/wiki/v2/spaces/get_node",
       },
-    };
+    }
 
-    const config = appConfigSchema.parse(raw);
-    expect(config.agentRuntime.containerTemplate.cmd).toContain("docker run");
-    expect(config.agentRuntime.connection.urlTemplate).toContain("agent-");
-    expect(config.server.port).toBe(9000);
-    expect(config.server.publicBaseUrl).toBe("http://localhost:9000");
-    expect(config.network?.name).toBe("bridge_autocoder");
-    expect(config.github?.webhookSecret).toBe("secret");
-    expect(config.github?.token).toBe("token");
-    expect(config.github?.repository).toBe("org/repo");
-    expect(config.github?.defaultBaseBranch).toBe("main");
-    expect(config.github?.apiBaseUrl).toBe("https://api.github.com");
-    expect(config.lark?.messageCardReceiveId).toBe("oc_123");
-    expect(config.lark?.messageCardReceiveIdType).toBe("open_id");
-    expect(config.lark?.commentFileType).toBe("docx");
-    expect(config.lark?.docCreateUrlTemplate).toBe("/open-apis/docx/v1/documents");
-    expect(config.lark?.docTokenType).toBe("auto");
-    expect(config.lark?.wikiNodeUrlTemplate).toBe("/open-apis/wiki/v2/spaces/get_node");
-  });
-});
+    const config = appConfigSchema.parse(raw)
+    expect(config.agentRuntime.containerTemplate.cmd).toContain("docker run")
+    expect(config.agentRuntime.connection.urlTemplate).toContain("agent-")
+    expect(config.server.port).toBe(9000)
+    expect(config.server.publicBaseUrl).toBe("http://localhost:9000")
+    expect(config.network?.name).toBe("bridge_autocoder")
+    expect(config.github?.webhookSecret).toBe("secret")
+    expect(config.github?.token).toBe("token")
+    expect(config.github?.repository).toBe("org/repo")
+    expect(config.github?.defaultBaseBranch).toBe("main")
+    expect(config.github?.apiBaseUrl).toBe("https://api.github.com")
+    expect(config.lark?.messageCardReceiveId).toBe("oc_123")
+    expect(config.lark?.messageCardReceiveIdType).toBe("open_id")
+    expect(config.lark?.commentFileType).toBe("docx")
+    expect(config.lark?.docCreateUrlTemplate).toBe(
+      "/open-apis/docx/v1/documents",
+    )
+    expect(config.lark?.docTokenType).toBe("auto")
+    expect(config.lark?.wikiNodeUrlTemplate).toBe(
+      "/open-apis/wiki/v2/spaces/get_node",
+    )
+  })
+})
