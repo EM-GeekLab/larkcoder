@@ -2,57 +2,6 @@
 
 通过飞书 IM 消息控制 Claude Code (ACP Server)，在远程服务器上完成编码工作。
 
-## 架构
-
-```
-飞书 IM → HTTP Server (Hono) → Orchestrator → ProcessManager (spawn claude) → ACP Client (SSE)
-                                     ↕                                              ↕
-                                 LarkClient (消息/卡片/文档)              Claude Code ACP Server
-```
-
-- 用户通过飞书私聊/群聊 @机器人 发送 prompt
-- Orchestrator 创建任务，spawn Claude Code 进程（直接运行，不使用 Docker）
-- 通过 ACP 协议 (SSE) 与 Agent 双向通信
-- 实时更新飞书交互卡片展示进度
-- 用户在消息线程中回复作为后续 prompt
-- 飞书文档作为 Plan/记忆载体，注入 Agent 上下文
-
-## 技术栈
-
-| 组件   | 选择                     |
-| ------ | ------------------------ |
-| HTTP   | Hono                     |
-| 飞书   | @larksuiteoapi/node-sdk  |
-| ACP    | @agentclientprotocol/sdk |
-| 数据库 | better-sqlite3 (WAL)     |
-| 配置   | yaml + zod               |
-| 日志   | loglayer                 |
-
-## 模块结构
-
-```
-src/
-  index.ts                    # 入口，组装依赖，启动服务
-  config/                     # Zod schema + YAML 加载
-  server/routes/              # health
-  lark/                       # client, eventHandler, cardTemplates, docService
-  agent/                      # processManager, acpClient, sseStream, clientBridge
-  task/                       # repository (SQLite), service (状态机), migrations
-  orchestrator/               # orchestrator (核心协调), threadMapper
-  utils/                      # logger, errors
-```
-
-## 任务状态流转
-
-```
-pending → running → waiting → running (继续)
-                  → completed
-                  → failed → running (重试)
-           → cancelled
-```
-
----
-
 ## Agent 编码准则
 
 以下准则中，"MUST"、"SHOULD"、"MAY" 等关键词按 RFC 2119 解释。
