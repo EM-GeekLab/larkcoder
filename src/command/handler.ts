@@ -38,11 +38,7 @@ export class CommandHandler {
     private logger: Logger,
   ) {}
 
-  async handle(
-    parsed: ParsedCommand,
-    message: ParsedMessage,
-    _threadId: string,
-  ): Promise<void> {
+  async handle(parsed: ParsedCommand, message: ParsedMessage, _threadId: string): Promise<void> {
     this.logger
       .withMetadata({ command: parsed.command, args: parsed.args })
       .info("Handling slash command")
@@ -54,10 +50,7 @@ export class CommandHandler {
     }
   }
 
-  private async handleLocal(
-    parsed: ParsedCommand,
-    message: ParsedMessage,
-  ): Promise<void> {
+  private async handleLocal(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
     switch (parsed.command) {
       case "help":
         await this.larkClient.replyMarkdownCard(message.messageId, HELP_TEXT)
@@ -98,25 +91,16 @@ export class CommandHandler {
   private async handleStop(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No active session found.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     await this.orchestrator.stopSession(session.id)
-    await this.larkClient.replyMarkdownCard(
-      message.messageId,
-      "Session stopped.",
-    )
+    await this.larkClient.replyMarkdownCard(message.messageId, "Session stopped.")
   }
 
   private async handleNew(args: string, message: ParsedMessage): Promise<void> {
     if (args) {
-      await this.orchestrator.handleNewSession(
-        { ...message, text: args },
-        message.messageId,
-      )
+      await this.orchestrator.handleNewSession({ ...message, text: args }, message.messageId)
     } else {
       await this.orchestrator.handleNewSession(message, message.messageId)
     }
@@ -133,10 +117,7 @@ export class CommandHandler {
   private async handlePlan(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No active session found.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     const newMode = !session.isPlanMode
@@ -148,10 +129,7 @@ export class CommandHandler {
   private async handleInfo(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No session found.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No session found.")
       return
     }
 
@@ -169,19 +147,13 @@ export class CommandHandler {
   private async handleModel(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No active session found.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     await this.orchestrator.handleModelSelect(session.id, message)
   }
 
-  private async handlePassthrough(
-    parsed: ParsedCommand,
-    message: ParsedMessage,
-  ): Promise<void> {
+  private async handlePassthrough(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
       await this.larkClient.replyMarkdownCard(
@@ -205,11 +177,7 @@ export class CommandHandler {
 
     if (available.includes(parsed.command)) {
       if (session.status === "idle") {
-        await this.orchestrator.runInSession(
-          session.id,
-          commandText,
-          message.messageId,
-        )
+        await this.orchestrator.runInSession(session.id, commandText, message.messageId)
       } else if (session.status === "running") {
         await this.larkClient.replyMarkdownCard(
           message.messageId,

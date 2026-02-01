@@ -16,9 +16,7 @@ export function buildMarkdownCard(content: string): Record<string, unknown> {
 
 export const STREAMING_ELEMENT_ID = "md_stream"
 
-export function buildStreamingCard(
-  initialContent?: string,
-): Record<string, unknown> {
+export function buildStreamingCard(initialContent?: string): Record<string, unknown> {
   return {
     schema: "2.0",
     config: {
@@ -43,9 +41,7 @@ export function buildStreamingCard(
   }
 }
 
-export function buildStreamingCloseSettings(
-  summaryContent: string,
-): Record<string, unknown> {
+export function buildStreamingCloseSettings(summaryContent: string): Record<string, unknown> {
   return {
     config: {
       streaming_mode: false,
@@ -60,9 +56,7 @@ type PermissionCardData = {
   options: Array<{ optionId: string; label: string }>
 }
 
-export function buildPermissionCard(
-  data: PermissionCardData,
-): Record<string, unknown> {
+export function buildPermissionCard(data: PermissionCardData): Record<string, unknown> {
   const actions = data.options.map((opt, idx) => ({
     tag: "button",
     text: { tag: "plain_text", content: `${idx + 1}` },
@@ -85,9 +79,7 @@ export function buildPermissionCard(
         ? [
             {
               tag: "markdown",
-              content: data.options
-                .map((opt, idx) => `**${idx + 1}.** ${opt.label}`)
-                .join("\n"),
+              content: data.options.map((opt, idx) => `**${idx + 1}.** ${opt.label}`).join("\n"),
             },
           ]
         : []),
@@ -100,9 +92,7 @@ type SessionListCardData = {
   sessions: Session[]
 }
 
-export function buildSessionListCard(
-  data: SessionListCardData,
-): Record<string, unknown> {
+export function buildSessionListCard(data: SessionListCardData): Record<string, unknown> {
   const lines = data.sessions.map((s, idx) => {
     const prompt = truncate(s.initialPrompt, 40)
     const time = s.updatedAt.replace("T", " ").slice(0, 19)
@@ -128,9 +118,7 @@ export function buildSessionListCard(
   }
 }
 
-export function buildSessionDeleteCard(
-  data: SessionListCardData,
-): Record<string, unknown> {
+export function buildSessionDeleteCard(data: SessionListCardData): Record<string, unknown> {
   const lines = data.sessions.map((s, idx) => {
     const prompt = truncate(s.initialPrompt, 40)
     const time = s.updatedAt.replace("T", " ").slice(0, 19)
@@ -161,9 +149,7 @@ type ModelSelectCardData = {
   models: Array<{ modelId: string; label: string }>
 }
 
-export function buildModelSelectCard(
-  data: ModelSelectCardData,
-): Record<string, unknown> {
+export function buildModelSelectCard(data: ModelSelectCardData): Record<string, unknown> {
   const actions = data.models.map((m) => ({
     tag: "button",
     text: { tag: "plain_text", content: m.label },

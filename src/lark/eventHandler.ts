@@ -24,8 +24,9 @@ export class LarkEventHandler {
     return new Lark.EventDispatcher({}).register({
       "im.message.receive_v1": async (data: Record<string, unknown>) => {
         const header = data.header as Record<string, unknown> | undefined
-        const eventId = (header?.event_id ??
-          (data as Record<string, unknown>).event_id) as string | undefined
+        const eventId = (header?.event_id ?? (data as Record<string, unknown>).event_id) as
+          | string
+          | undefined
 
         // Event dedup
         if (eventId) {
@@ -72,9 +73,7 @@ export class LarkEventHandler {
           if (this.cardActionHandler) {
             // Fire-and-forget: must return within 3 seconds
             this.cardActionHandler(action).catch((err: unknown) => {
-              this.logger
-                .withError(err as Error)
-                .error("Card action handler error")
+              this.logger.withError(err as Error).error("Card action handler error")
             })
           }
         }
@@ -112,9 +111,7 @@ export class LarkEventHandler {
 
     // In group chats, strip @mention prefix
     if (chatType === "group") {
-      const mentions = message.mentions as
-        | Array<Record<string, unknown>>
-        | undefined
+      const mentions = message.mentions as Array<Record<string, unknown>> | undefined
       if (!mentions || mentions.length === 0) {
         // Not mentioned, ignore in group
         return null

@@ -44,11 +44,7 @@ export class SessionRepository {
   }
 
   async findById(id: string): Promise<Session | null> {
-    const row = await this.db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.id, id))
-      .get()
+    const row = await this.db.select().from(sessions).where(eq(sessions.id, id)).get()
     return row ? rowToSession(row) : null
   }
 
@@ -89,24 +85,15 @@ export class SessionRepository {
 
   async updateStatus(id: string, status: SessionStatus): Promise<void> {
     const now = new Date().toISOString()
-    await this.db
-      .update(sessions)
-      .set({ status, updatedAt: now })
-      .where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ status, updatedAt: now }).where(eq(sessions.id, id))
   }
 
   async updateAcpSessionId(id: string, acpSessionId: string): Promise<void> {
     const now = new Date().toISOString()
-    await this.db
-      .update(sessions)
-      .set({ acpSessionId, updatedAt: now })
-      .where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ acpSessionId, updatedAt: now }).where(eq(sessions.id, id))
   }
 
-  async updateWorkingMessageId(
-    id: string,
-    workingMessageId: string | null,
-  ): Promise<void> {
+  async updateWorkingMessageId(id: string, workingMessageId: string | null): Promise<void> {
     const now = new Date().toISOString()
     await this.db
       .update(sessions)
@@ -116,10 +103,7 @@ export class SessionRepository {
 
   async updatePlanMode(id: string, isPlanMode: boolean): Promise<void> {
     const now = new Date().toISOString()
-    await this.db
-      .update(sessions)
-      .set({ isPlanMode, updatedAt: now })
-      .where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ isPlanMode, updatedAt: now }).where(eq(sessions.id, id))
   }
 
   async isEventProcessed(eventId: string): Promise<boolean> {
@@ -145,8 +129,6 @@ export class SessionRepository {
 
   async cleanOldEvents(olderThanMs: number): Promise<void> {
     const cutoff = new Date(Date.now() - olderThanMs).toISOString()
-    await this.db
-      .delete(processedEvents)
-      .where(lt(processedEvents.processedAt, cutoff))
+    await this.db.delete(processedEvents).where(lt(processedEvents.processedAt, cutoff))
   }
 }

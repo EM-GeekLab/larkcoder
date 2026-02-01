@@ -32,10 +32,7 @@ export class TaskNotFoundError extends LarkCoderError {
 
 export class TaskStateError extends LarkCoderError {
   constructor(taskId: string, currentStatus: string, action: string) {
-    super(
-      `Cannot ${action} task ${taskId} in status ${currentStatus}`,
-      "TASK_STATE_ERROR",
-    )
+    super(`Cannot ${action} task ${taskId} in status ${currentStatus}`, "TASK_STATE_ERROR")
     this.name = "TaskStateError"
   }
 }
@@ -49,10 +46,7 @@ export class SessionNotFoundError extends LarkCoderError {
 
 export class SessionStateError extends LarkCoderError {
   constructor(sessionId: string, currentStatus: string, action: string) {
-    super(
-      `Cannot ${action} session ${sessionId} in status ${currentStatus}`,
-      "SESSION_STATE_ERROR",
-    )
+    super(`Cannot ${action} session ${sessionId} in status ${currentStatus}`, "SESSION_STATE_ERROR")
     this.name = "SessionStateError"
   }
 }

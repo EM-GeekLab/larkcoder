@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process"
-import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import type { Logger } from "../utils/logger.js"
 import type { AgentProcessInfo } from "./types.js"
 
@@ -22,7 +22,7 @@ export class ProcessManager {
     this.args = options.args
     this.logger = options.logger
     this.useMockAgent = process.env.USE_MOCK_AGENT === "1" || process.env.USE_MOCK_AGENT === "true"
-    
+
     if (this.useMockAgent) {
       this.logger.warn("⚠️  Using MOCK AGENT - This is for testing only (USE_MOCK_AGENT is set)")
     }
@@ -37,13 +37,9 @@ export class ProcessManager {
     const args = this.useMockAgent ? this.getMockAgentArgs() : this.args
 
     if (this.useMockAgent) {
-      this.logger.warn(
-        `⚠️  Spawning MOCK AGENT for session ${sessionId} (cwd ${workingDir})`,
-      )
+      this.logger.warn(`⚠️  Spawning MOCK AGENT for session ${sessionId} (cwd ${workingDir})`)
     } else {
-      this.logger.info(
-        `Spawning agent: ${command} ${args.join(" ")} (cwd ${workingDir})`,
-      )
+      this.logger.info(`Spawning agent: ${command} ${args.join(" ")} (cwd ${workingDir})`)
     }
 
     const child = spawn(command, args, {
@@ -59,9 +55,7 @@ export class ProcessManager {
     })
 
     child.on("exit", (code, signal) => {
-      this.logger.info(
-        `Agent process exited: session=${sessionId} code=${code} signal=${signal}`,
-      )
+      this.logger.info(`Agent process exited: session=${sessionId} code=${code} signal=${signal}`)
       this.processes.delete(sessionId)
     })
 

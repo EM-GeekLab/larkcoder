@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test"
 import type { SessionRepository } from "../src/session/repository.js"
-import type {
-  CreateSessionParams,
-  Session,
-  SessionStatus,
-} from "../src/session/types.js"
+import type { CreateSessionParams, Session, SessionStatus } from "../src/session/types.js"
 import { SessionService } from "../src/session/service.js"
 import { SessionNotFoundError, SessionStateError } from "../src/utils/errors.js"
 import { createLogger } from "../src/utils/logger.js"
@@ -99,10 +95,7 @@ class MockSessionRepository implements Pick<
     }
   }
 
-  async updateWorkingMessageId(
-    id: string,
-    workingMessageId: string | null,
-  ): Promise<void> {
+  async updateWorkingMessageId(id: string, workingMessageId: string | null): Promise<void> {
     const session = this.sessions.get(id)
     if (session) {
       session.workingMessageId = workingMessageId ?? undefined

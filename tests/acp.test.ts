@@ -32,12 +32,8 @@ describe.skipIf(!process.env.CLAUDECODE)("ACP Integration", () => {
 
     // Create ndjson stream over stdio
     // ndJsonStream(output, input): output is writable (to agent stdin), input is readable (from agent stdout)
-    const toAgent = Writable.toWeb(
-      agentProcess.stdin!,
-    ) as WritableStream<Uint8Array>
-    const fromAgent = Readable.toWeb(
-      agentProcess.stdout!,
-    ) as ReadableStream<Uint8Array>
+    const toAgent = Writable.toWeb(agentProcess.stdin!) as WritableStream<Uint8Array>
+    const fromAgent = Readable.toWeb(agentProcess.stdout!) as ReadableStream<Uint8Array>
     const stream = acp.ndJsonStream(toAgent, fromAgent)
 
     // Create client that collects session updates
@@ -123,9 +119,7 @@ describe.skipIf(!process.env.CLAUDECODE)("ACP Integration", () => {
       for (const update of sessionUpdates) {
         const u = update.update as Record<string, unknown> | undefined
         if (u?.sessionUpdate === "agent_message_chunk") {
-          const content = u.content as
-            | { type: string; text?: string }
-            | undefined
+          const content = u.content as { type: string; text?: string } | undefined
           if (content?.type === "text" && content.text) {
             textChunks.push(content.text)
           }

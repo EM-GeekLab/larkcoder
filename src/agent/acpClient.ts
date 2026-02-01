@@ -20,13 +20,7 @@ export type CreateAcpClientOptions = {
 }
 
 export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
-  const {
-    process: child,
-    logger,
-    onSessionUpdate,
-    onPermissionRequest,
-    tools,
-  } = options
+  const { process: child, logger, onSessionUpdate, onPermissionRequest, tools } = options
 
   if (!child.stdin || !child.stdout) {
     throw new Error("Agent process must have piped stdin and stdout")
@@ -75,9 +69,7 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
     },
     async setSessionModel(params: { sessionId: string; modelId: string }) {
       return (
-        (
-          connection as unknown as Record<string, Function>
-        ).unstable_setSessionModel?.(params) ?? {}
+        (connection as unknown as Record<string, Function>).unstable_setSessionModel?.(params) ?? {}
       )
     },
     get signal() {

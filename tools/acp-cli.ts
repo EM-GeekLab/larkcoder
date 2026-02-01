@@ -52,18 +52,14 @@ async function main(): Promise<void> {
       const updateType = update.sessionUpdate as string | undefined
       switch (updateType) {
         case "agent_message_chunk": {
-          const content = update.content as
-            | { type: string; text?: string }
-            | undefined
+          const content = update.content as { type: string; text?: string } | undefined
           if (content?.type === "text" && content.text) {
             process.stdout.write(content.text)
           }
           break
         }
         case "agent_thought_chunk": {
-          const content = update.content as
-            | { type: string; text?: string }
-            | undefined
+          const content = update.content as { type: string; text?: string } | undefined
           if (content?.type === "text" && content.text) {
             process.stdout.write(`${DIM}${content.text}${RESET}`)
           }

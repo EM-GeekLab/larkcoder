@@ -14,9 +14,7 @@ export const sessions = sqliteTable(
     workingDir: text("working_dir").notNull(),
     docToken: text("doc_token"),
     workingMessageId: text("working_message_id"),
-    isPlanMode: integer("is_plan_mode", { mode: "boolean" })
-      .notNull()
-      .default(false),
+    isPlanMode: integer("is_plan_mode", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },

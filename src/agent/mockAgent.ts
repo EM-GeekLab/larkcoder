@@ -18,9 +18,7 @@ class MockAgent implements acp.Agent {
     this.sessions = new Map()
   }
 
-  async initialize(
-    _params: acp.InitializeRequest,
-  ): Promise<acp.InitializeResponse> {
+  async initialize(_params: acp.InitializeRequest): Promise<acp.InitializeResponse> {
     return {
       protocolVersion: acp.PROTOCOL_VERSION,
       agentCapabilities: {
@@ -30,9 +28,7 @@ class MockAgent implements acp.Agent {
     }
   }
 
-  async newSession(
-    params: acp.NewSessionRequest,
-  ): Promise<acp.NewSessionResponse> {
+  async newSession(params: acp.NewSessionRequest): Promise<acp.NewSessionResponse> {
     const sessionId = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("")
@@ -40,8 +36,7 @@ class MockAgent implements acp.Agent {
     this.sessions.set(sessionId, {
       pendingPrompt: null,
       cwd: params.cwd ?? process.cwd(),
-      systemPrompt: (params._meta as { systemPrompt?: string } | undefined)
-        ?.systemPrompt,
+      systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
     })
 
     return {
@@ -58,8 +53,7 @@ class MockAgent implements acp.Agent {
       this.sessions.set(sessionId, {
         pendingPrompt: null,
         cwd: params.cwd ?? process.cwd(),
-        systemPrompt: (params._meta as { systemPrompt?: string } | undefined)
-          ?.systemPrompt,
+        systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
       })
     }
 
@@ -67,16 +61,12 @@ class MockAgent implements acp.Agent {
     return {}
   }
 
-  async authenticate(
-    _params: acp.AuthenticateRequest,
-  ): Promise<acp.AuthenticateResponse | void> {
+  async authenticate(_params: acp.AuthenticateRequest): Promise<acp.AuthenticateResponse | void> {
     // No auth needed - return empty response
     return {}
   }
 
-  async setSessionMode(
-    _params: acp.SetSessionModeRequest,
-  ): Promise<acp.SetSessionModeResponse> {
+  async setSessionMode(_params: acp.SetSessionModeRequest): Promise<acp.SetSessionModeResponse> {
     // Session mode changes not implemented in this mock
     return {}
   }
@@ -108,10 +98,7 @@ class MockAgent implements acp.Agent {
     }
   }
 
-  private async simulateTurn(
-    sessionId: string,
-    abortSignal: AbortSignal,
-  ): Promise<void> {
+  private async simulateTurn(sessionId: string, abortSignal: AbortSignal): Promise<void> {
     const session = this.sessions.get(sessionId)
     if (!session) {
       return

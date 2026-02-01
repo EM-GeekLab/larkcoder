@@ -71,12 +71,7 @@ export class Orchestrator {
     private docService: DocService,
     private logger: Logger,
   ) {
-    this.commandHandler = new CommandHandler(
-      this,
-      sessionService,
-      larkClient,
-      logger,
-    )
+    this.commandHandler = new CommandHandler(this, sessionService, larkClient, logger)
   }
 
   async handleMessage(message: ParsedMessage): Promise<void> {
@@ -113,40 +108,25 @@ export class Orchestrator {
     switch (action.action) {
       case "permission_select":
         if (action.sessionId && action.optionId) {
-          await this.handlePermissionSelect(
-            action.sessionId,
-            action.optionId,
-            action.openMessageId,
-          )
+          await this.handlePermissionSelect(action.sessionId, action.optionId, action.openMessageId)
         }
         break
 
       case "session_select":
         if (action.sessionId) {
-          await this.handleSessionSelect(
-            action.sessionId,
-            action.openMessageId,
-            action.openChatId,
-          )
+          await this.handleSessionSelect(action.sessionId, action.openMessageId, action.openChatId)
         }
         break
 
       case "model_select":
         if (action.sessionId && action.modelId) {
-          await this.handleModelSelectAction(
-            action.sessionId,
-            action.modelId,
-            action.openMessageId,
-          )
+          await this.handleModelSelectAction(action.sessionId, action.modelId, action.openMessageId)
         }
         break
 
       case "session_delete":
         if (action.sessionId) {
-          await this.handleSessionDeleteAction(
-            action.sessionId,
-            action.openMessageId,
-          )
+          await this.handleSessionDeleteAction(action.sessionId, action.openMessageId)
         }
         break
 
@@ -171,14 +151,9 @@ export class Orchestrator {
     return null
   }
 
-  async handleNewSession(
-    message: ParsedMessage,
-    replyToMessageId: string,
-  ): Promise<void> {
+  async handleNewSession(message: ParsedMessage, replyToMessageId: string): Promise<void> {
     const threadId =
-      message.chatType === "p2p"
-        ? message.chatId
-        : (message.rootId ?? message.messageId)
+      message.chatType === "p2p" ? message.chatId : (message.rootId ?? message.messageId)
 
     const session = await this.sessionService.createSession({
       chatId: message.chatId,
@@ -207,10 +182,7 @@ export class Orchestrator {
   async handleListSessions(message: ParsedMessage): Promise<void> {
     const sessions = await this.sessionService.listSessions(message.chatId, 10)
     if (sessions.length === 0) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No sessions found in this chat.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No sessions found in this chat.")
       return
     }
 
@@ -221,10 +193,7 @@ export class Orchestrator {
   async handleDeleteSessions(message: ParsedMessage): Promise<void> {
     const sessions = await this.sessionService.listSessions(message.chatId, 10)
     if (sessions.length === 0) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No sessions found in this chat.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No sessions found in this chat.")
       return
     }
 
@@ -232,10 +201,7 @@ export class Orchestrator {
     await this.larkClient.replyCard(message.messageId, card)
   }
 
-  async handleModelSelect(
-    sessionId: string,
-    message: ParsedMessage,
-  ): Promise<void> {
+  async handleModelSelect(sessionId: string, message: ParsedMessage): Promise<void> {
     const models = [
       { modelId: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
       {
@@ -248,11 +214,7 @@ export class Orchestrator {
     await this.larkClient.replyCard(message.messageId, card)
   }
 
-  async runInSession(
-    sessionId: string,
-    prompt: string,
-    replyToMessageId: string,
-  ): Promise<void> {
+  async runInSession(sessionId: string, prompt: string, replyToMessageId: string): Promise<void> {
     const session = await this.sessionService.getSession(sessionId)
 
     try {
@@ -284,18 +246,14 @@ export class Orchestrator {
       // Close streaming card with summary
       const summaryText = active!.streamingCard?.accumulatedText ?? ""
       const summary =
-        summaryText.length > 100
-          ? `${summaryText.slice(0, 100)}...`
-          : summaryText || "(no output)"
+        summaryText.length > 100 ? `${summaryText.slice(0, 100)}...` : summaryText || "(no output)"
       await this.closeStreamingCard(sessionId, summary)
 
       // Set idle
       await this.sessionService.setIdle(sessionId)
     } catch (error: unknown) {
       const msg = extractErrorMessage(error)
-      this.logger
-        .withError(error as Error)
-        .error(`Prompt failed for session ${sessionId}`)
+      this.logger.withError(error as Error).error(`Prompt failed for session ${sessionId}`)
 
       // Append error to streaming card and close
       const active = this.activeSessions.get(sessionId)
@@ -305,10 +263,7 @@ export class Orchestrator {
         await this.closeStreamingCard(sessionId, `Error: ${msg}`)
       } else {
         // No streaming card — fallback to markdown card
-        await this.larkClient.replyMarkdownCard(
-          replyToMessageId,
-          `**Error:** ${msg}`,
-        )
+        await this.larkClient.replyMarkdownCard(replyToMessageId, `**Error:** ${msg}`)
       }
 
       // Set idle
@@ -346,9 +301,7 @@ export class Orchestrator {
     }
   }
 
-  getActiveSession(
-    sessionId: string,
-  ): { client: AgentClient; acpSessionId: string } | undefined {
+  getActiveSession(sessionId: string): { client: AgentClient; acpSessionId: string } | undefined {
     const session = this.activeSessions.get(sessionId)
     if (!session) {
       return undefined
@@ -378,32 +331,25 @@ export class Orchestrator {
 
     // Build doc context
     const docContext = await this.docService.buildDocContext(session.docToken)
-    const systemPrompt = [this.config.agent.systemPrompt, docContext]
-      .filter(Boolean)
-      .join("\n")
+    const systemPrompt = [this.config.agent.systemPrompt, docContext].filter(Boolean).join("\n")
 
     // Create ACP client
     const acpClient = createAcpClient({
       process: child,
       logger: this.logger,
       onSessionUpdate: (params) => this.handleSessionUpdate(session.id, params),
-      onPermissionRequest: (params) =>
-        this.handlePermissionRequest(session.id, params),
+      onPermissionRequest: (params) => this.handlePermissionRequest(session.id, params),
       tools: createDocTools(this.larkClient),
     })
 
-    this.logger
-      .withMetadata({ sessionId: session.id })
-      .debug("Initializing ACP connection")
+    this.logger.withMetadata({ sessionId: session.id }).debug("Initializing ACP connection")
     await acpClient.initialize()
 
     let acpSessionId: string
 
     if (session.acpSessionId) {
       // Resume existing ACP session
-      this.logger
-        .withMetadata({ sessionId: session.id })
-        .debug("Resuming ACP session")
+      this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
       await acpClient.resumeSession({
         sessionId: session.acpSessionId,
         cwd: session.workingDir,
@@ -411,9 +357,7 @@ export class Orchestrator {
       acpSessionId = session.acpSessionId
     } else {
       // Create new ACP session
-      this.logger
-        .withMetadata({ sessionId: session.id })
-        .debug("Creating new ACP session")
+      this.logger.withMetadata({ sessionId: session.id }).debug("Creating new ACP session")
       const sessionResponse = await acpClient.newSession({
         cwd: session.workingDir,
         mcpServers: [],
@@ -536,15 +480,9 @@ export class Orchestrator {
         buildSelectedCard(`Resumed session: ${label}`),
       )
 
-      await this.larkClient.sendMarkdownCard(
-        chatId,
-        `Switched to session: ${label}`,
-      )
+      await this.larkClient.sendMarkdownCard(chatId, `Switched to session: ${label}`)
     } catch {
-      await this.larkClient.updateCard(
-        cardMessageId,
-        buildSelectedCard("Session not found"),
-      )
+      await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }
   }
 
@@ -561,22 +499,14 @@ export class Orchestrator {
           modelId,
         })
       } catch (error: unknown) {
-        this.logger
-          .withError(error as Error)
-          .error("Failed to set session model")
+        this.logger.withError(error as Error).error("Failed to set session model")
       }
     }
 
-    await this.larkClient.updateCard(
-      cardMessageId,
-      buildSelectedCard(`Model: ${modelId}`),
-    )
+    await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Model: ${modelId}`))
   }
 
-  private async handleSessionDeleteAction(
-    sessionId: string,
-    cardMessageId: string,
-  ): Promise<void> {
+  private async handleSessionDeleteAction(sessionId: string, cardMessageId: string): Promise<void> {
     try {
       const session = await this.sessionService.getSession(sessionId)
       const label = session.initialPrompt.slice(0, 50)
@@ -598,10 +528,7 @@ export class Orchestrator {
         buildSelectedCard(`Deleted session: ${label}`),
       )
     } catch {
-      await this.larkClient.updateCard(
-        cardMessageId,
-        buildSelectedCard("Session not found"),
-      )
+      await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }
   }
 
@@ -614,13 +541,9 @@ export class Orchestrator {
       return
     }
 
-    const updateType = (update as Record<string, unknown>).sessionUpdate as
-      | string
-      | undefined
+    const updateType = (update as Record<string, unknown>).sessionUpdate as string | undefined
 
-    this.logger
-      .withMetadata({ sessionId, updateType })
-      .trace("Session update received")
+    this.logger.withMetadata({ sessionId, updateType }).trace("Session update received")
 
     const active = this.activeSessions.get(sessionId)
     if (!active) {
@@ -640,17 +563,16 @@ export class Orchestrator {
         break
       }
       case "current_mode_update": {
-        const modeId = (update as Record<string, unknown>).currentModeId as
-          | string
-          | undefined
+        const modeId = (update as Record<string, unknown>).currentModeId as string | undefined
         if (modeId) {
           active.currentMode = modeId
         }
         break
       }
       case "available_commands_update": {
-        const commands = (update as Record<string, unknown>)
-          .availableCommands as Array<{ name: string }> | undefined
+        const commands = (update as Record<string, unknown>).availableCommands as
+          | Array<{ name: string }>
+          | undefined
         active.availableCommands = commands?.map((c) => c.name) ?? []
         break
       }
@@ -669,7 +591,7 @@ export class Orchestrator {
 
   private async createStreamingCard(
     sessionId: string,
-    replyToMessageId: string,
+    replyToMessageId: string | undefined,
     initialContent: string,
   ): Promise<void> {
     const active = this.activeSessions.get(sessionId)
@@ -677,18 +599,25 @@ export class Orchestrator {
       return
     }
 
-    const cardId = await this.larkClient.createCardEntity(
-      buildStreamingCard(initialContent),
-    )
+    const cardId = await this.larkClient.createCardEntity(buildStreamingCard(initialContent))
     if (!cardId) {
       this.logger.error("Failed to create streaming card entity")
       return
     }
 
-    const messageId = await this.larkClient.replyCardEntity(
-      replyToMessageId,
-      cardId,
-    )
+    let messageId: string | undefined
+    if (replyToMessageId) {
+      // Reply to existing message
+      messageId = await this.larkClient.replyCardEntity(replyToMessageId, cardId)
+    } else {
+      // Send as new independent message using existing sendCard method
+      const session = await this.sessionService.getSession(sessionId)
+      messageId = await this.larkClient.sendCard(session.chatId, {
+        type: "card",
+        data: { card_id: cardId },
+      })
+    }
+
     if (!messageId) {
       this.logger.error("Failed to send streaming card")
       return
@@ -737,12 +666,7 @@ export class Orchestrator {
     const content = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
     const seq = this.nextSequence(sessionId)
 
-    await this.larkClient.streamCardText(
-      card.cardId,
-      STREAMING_ELEMENT_ID,
-      content,
-      seq,
-    )
+    await this.larkClient.streamCardText(card.cardId, STREAMING_ELEMENT_ID, content, seq)
 
     card.lastFlushedText = card.accumulatedText
   }
@@ -773,8 +697,7 @@ export class Orchestrator {
 
     // Generate summary from accumulated text
     const summaryText = active.streamingCard.accumulatedText.slice(0, 100)
-    const summary =
-      summaryText.length > 0 ? `${summaryText}...` : defaultSummary
+    const summary = summaryText.length > 0 ? `${summaryText}...` : defaultSummary
 
     await this.closeStreamingCard(sessionId, summary)
     return summary
@@ -782,16 +705,14 @@ export class Orchestrator {
 
   private async resumeStreamingAfterInteraction(
     sessionId: string,
-    replyToMessageId: string,
+    _replyToMessageId: string,
     initialContent: string = "",
   ): Promise<void> {
-    await this.createStreamingCard(sessionId, replyToMessageId, initialContent)
+    // Send new streaming card as independent message, not replying to previous message
+    await this.createStreamingCard(sessionId, undefined, initialContent)
   }
 
-  private async closeStreamingCard(
-    sessionId: string,
-    summaryText: string,
-  ): Promise<void> {
+  private async closeStreamingCard(sessionId: string, summaryText: string): Promise<void> {
     await this.forceFlush(sessionId)
 
     const active = this.activeSessions.get(sessionId)

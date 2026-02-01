@@ -33,14 +33,9 @@ export class LarkClient {
     this.wsClient?.close()
   }
 
-  async replyText(
-    messageId: string,
-    text: string,
-  ): Promise<string | undefined> {
+  async replyText(messageId: string, text: string): Promise<string | undefined> {
     try {
-      this.logger
-        .withMetadata({ messageId, textLength: text.length })
-        .debug("Replying text")
+      this.logger.withMetadata({ messageId, textLength: text.length }).debug("Replying text")
       const resp = await this.sdk.im.message.reply({
         path: { message_id: messageId },
         data: {
@@ -75,10 +70,7 @@ export class LarkClient {
     }
   }
 
-  async sendCard(
-    chatId: string,
-    card: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  async sendCard(chatId: string, card: Record<string, unknown>): Promise<string | undefined> {
     try {
       const resp = await this.sdk.im.message.create({
         data: {
@@ -95,10 +87,7 @@ export class LarkClient {
     }
   }
 
-  async replyCard(
-    messageId: string,
-    card: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  async replyCard(messageId: string, card: Record<string, unknown>): Promise<string | undefined> {
     try {
       this.logger.withMetadata({ messageId }).debug("Replying card")
       const resp = await this.sdk.im.message.reply({
@@ -118,10 +107,7 @@ export class LarkClient {
     }
   }
 
-  async replyPost(
-    messageId: string,
-    post: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  async replyPost(messageId: string, post: Record<string, unknown>): Promise<string | undefined> {
     try {
       this.logger.withMetadata({ messageId }).debug("Replying post")
       const resp = await this.sdk.im.message.reply({
@@ -141,11 +127,7 @@ export class LarkClient {
     }
   }
 
-  async editMessage(
-    messageId: string,
-    msgType: "text" | "post",
-    content: string,
-  ): Promise<void> {
+  async editMessage(messageId: string, msgType: "text" | "post", content: string): Promise<void> {
     try {
       this.logger.withMetadata({ messageId, msgType }).debug("Editing message")
       await this.sdk.im.message.update({
@@ -158,10 +140,7 @@ export class LarkClient {
     }
   }
 
-  async updateCard(
-    messageId: string,
-    card: Record<string, unknown>,
-  ): Promise<void> {
+  async updateCard(messageId: string, card: Record<string, unknown>): Promise<void> {
     try {
       this.logger.withMetadata({ messageId }).debug("Updating card")
       await this.sdk.im.message.patch({
@@ -186,10 +165,7 @@ export class LarkClient {
     }
   }
 
-  async sendPost(
-    chatId: string,
-    post: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  async sendPost(chatId: string, post: Record<string, unknown>): Promise<string | undefined> {
     try {
       const resp = await this.sdk.im.message.create({
         data: {
@@ -206,9 +182,7 @@ export class LarkClient {
     }
   }
 
-  async createCardEntity(
-    cardJson: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  async createCardEntity(cardJson: Record<string, unknown>): Promise<string | undefined> {
     try {
       this.logger.debug("Creating card entity")
       const resp = await this.sdk.cardkit.v1.card.create({
@@ -218,21 +192,14 @@ export class LarkClient {
       this.logger.withMetadata({ cardId }).debug("Card entity created")
       return cardId
     } catch (error: unknown) {
-      this.logger
-        .withError(error as Error)
-        .error("Failed to create card entity")
+      this.logger.withError(error as Error).error("Failed to create card entity")
       return undefined
     }
   }
 
-  async replyCardEntity(
-    messageId: string,
-    cardId: string,
-  ): Promise<string | undefined> {
+  async replyCardEntity(messageId: string, cardId: string): Promise<string | undefined> {
     try {
-      this.logger
-        .withMetadata({ messageId, cardId })
-        .debug("Replying with card entity")
+      this.logger.withMetadata({ messageId, cardId }).debug("Replying with card entity")
       const resp = await this.sdk.im.message.reply({
         path: { message_id: messageId },
         data: {
@@ -277,23 +244,15 @@ export class LarkClient {
         data: { settings: JSON.stringify(settings), sequence },
       })
     } catch (error: unknown) {
-      this.logger
-        .withError(error as Error)
-        .error("Failed to update card settings")
+      this.logger.withError(error as Error).error("Failed to update card settings")
     }
   }
 
-  async replyMarkdownCard(
-    messageId: string,
-    markdown: string,
-  ): Promise<string | undefined> {
+  async replyMarkdownCard(messageId: string, markdown: string): Promise<string | undefined> {
     return this.replyCard(messageId, buildMarkdownCard(markdown))
   }
 
-  async sendMarkdownCard(
-    chatId: string,
-    markdown: string,
-  ): Promise<string | undefined> {
+  async sendMarkdownCard(chatId: string, markdown: string): Promise<string | undefined> {
     return this.sendCard(chatId, buildMarkdownCard(markdown))
   }
 
@@ -327,9 +286,7 @@ export class LarkClient {
       })
       return true
     } catch (error: unknown) {
-      this.logger
-        .withError(error as Error)
-        .error("Failed to append doc content")
+      this.logger.withError(error as Error).error("Failed to append doc content")
       return false
     }
   }

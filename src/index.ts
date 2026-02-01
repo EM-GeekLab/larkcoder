@@ -26,10 +26,7 @@ async function main(): Promise<void> {
   // Initialize data layer
   const { db, close: closeDb } = await createDatabase(config.database.path)
   const sessionRepo = new SessionRepository(db)
-  const sessionService = new SessionService(
-    sessionRepo,
-    createLogger({ prefix: "session" }),
-  )
+  const sessionService = new SessionService(sessionRepo, createLogger({ prefix: "session" }))
 
   // Initialize process manager
   const processManager = new ProcessManager({
@@ -39,10 +36,7 @@ async function main(): Promise<void> {
   })
 
   // Initialize Lark
-  const larkClient = new LarkClient(
-    config.lark,
-    createLogger({ prefix: "lark" }),
-  )
+  const larkClient = new LarkClient(config.lark, createLogger({ prefix: "lark" }))
   const docService = new DocService(larkClient, createLogger({ prefix: "doc" }))
 
   // Initialize orchestrator

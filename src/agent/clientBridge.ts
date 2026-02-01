@@ -37,11 +37,10 @@ export class ClientBridge implements acp.Client {
   }
 
   async sessionUpdate(params: acp.SessionNotification): Promise<void> {
-    const updateType = (params.update as Record<string, unknown> | undefined)
-      ?.sessionUpdate as string | undefined
-    this.logger
-      .withMetadata({ updateType })
-      .trace("ClientBridge received session update")
+    const updateType = (params.update as Record<string, unknown> | undefined)?.sessionUpdate as
+      | string
+      | undefined
+    this.logger.withMetadata({ updateType }).trace("ClientBridge received session update")
     await this.onSessionUpdateCallback?.(params)
   }
 
@@ -89,10 +88,7 @@ export class ClientBridge implements acp.Client {
     throw new Error(`Unsupported ext method: ${method}`)
   }
 
-  async extNotification(
-    method: string,
-    _params: Record<string, unknown>,
-  ): Promise<void> {
+  async extNotification(method: string, _params: Record<string, unknown>): Promise<void> {
     this.logger.info(`Ext notification: ${method}`)
   }
 }

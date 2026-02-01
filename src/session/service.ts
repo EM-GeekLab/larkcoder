@@ -45,11 +45,7 @@ export class SessionService {
   private transition(session: Session, nextStatus: SessionStatus): void {
     const allowed = validTransitions[session.status]
     if (!allowed?.includes(nextStatus)) {
-      throw new SessionStateError(
-        session.id,
-        session.status,
-        `transition to ${nextStatus}`,
-      )
+      throw new SessionStateError(session.id, session.status, `transition to ${nextStatus}`)
     }
   }
 
@@ -73,10 +69,7 @@ export class SessionService {
     await this.repo.updateAcpSessionId(id, acpSessionId)
   }
 
-  async setWorkingMessageId(
-    id: string,
-    messageId: string | null,
-  ): Promise<void> {
+  async setWorkingMessageId(id: string, messageId: string | null): Promise<void> {
     await this.repo.updateWorkingMessageId(id, messageId)
   }
 

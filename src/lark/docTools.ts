@@ -10,8 +10,7 @@ export function createDocTools(larkClient: LarkClient): ToolRegistration[] {
 function createReadDocTool(larkClient: LarkClient): ToolRegistration {
   const definition: ToolDefinition = {
     name: "read_lark_doc",
-    description:
-      "Read the plain text content of a Feishu (Lark) document by its token.",
+    description: "Read the plain text content of a Feishu (Lark) document by its token.",
     inputSchema: {
       type: "object",
       properties: {
@@ -66,9 +65,7 @@ function createAppendDocTool(larkClient: LarkClient): ToolRegistration {
       return { error: "doc_token and content are required" }
     }
     const ok = await larkClient.appendDocContent(docToken, content)
-    return ok
-      ? { success: true }
-      : { error: "Failed to append content to document" }
+    return ok ? { success: true } : { error: "Failed to append content to document" }
   }
 
   return { definition, handler }

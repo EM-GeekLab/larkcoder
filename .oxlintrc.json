@@ -3,15 +3,7 @@
   "env": {
     "builtin": true
   },
-  "plugins": [
-    "unicorn",
-    "typescript",
-    "oxc",
-    "eslint",
-    "import",
-    "jsdoc",
-    "node"
-  ],
+  "plugins": ["unicorn", "typescript", "oxc", "eslint", "import", "jsdoc", "node"],
   "ignorePatterns": ["scripts/test-*.ts", "*.config.ts"],
   "categories": {
     "correctness": "error",
