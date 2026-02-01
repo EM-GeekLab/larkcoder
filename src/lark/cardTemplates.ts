@@ -15,6 +15,7 @@ export function buildMarkdownCard(content: string): Record<string, unknown> {
 }
 
 export const STREAMING_ELEMENT_ID = "md_stream"
+export const PROCESSING_ELEMENT_ID = "processing_indicator"
 
 export function buildStreamingCard(initialContent?: string): Record<string, unknown> {
   return {
@@ -35,6 +36,17 @@ export function buildStreamingCard(initialContent?: string): Record<string, unkn
           tag: "markdown",
           content: initialContent ?? "",
           element_id: STREAMING_ELEMENT_ID,
+        },
+        {
+          tag: "markdown",
+          content: "<font color='grey-500'>Processing...</font>",
+          text_size: "notation",
+          element_id: PROCESSING_ELEMENT_ID,
+          icon: {
+            tag: "standard_icon",
+            token: "down-right_outlined",
+            color: "light_grey",
+          },
         },
       ],
     },

@@ -12,6 +12,7 @@ import { createAcpClient } from "../agent/acpClient.js"
 import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
+  PROCESSING_ELEMENT_ID,
   STREAMING_ELEMENT_ID,
   buildModelSelectCard,
   buildPermissionCard,
@@ -225,7 +226,7 @@ export class Orchestrator {
       await this.sessionService.setRunning(sessionId)
 
       // Create streaming card
-      await this.createStreamingCard(sessionId, replyToMessageId, "")
+      await this.createStreamingCard(sessionId, replyToMessageId, "Pending...")
 
       // Send prompt
       const active = this.activeSessions.get(sessionId)
@@ -721,9 +722,13 @@ export class Orchestrator {
       return
     }
 
-    const closeSettings = buildStreamingCloseSettings(summaryText)
+    // Delete the "Processing..." indicator before closing
     const seq = this.nextSequence(sessionId)
-    await this.larkClient.updateCardSettings(card.cardId, closeSettings, seq)
+    await this.larkClient.deleteCardElement(card.cardId, PROCESSING_ELEMENT_ID, seq)
+
+    const closeSettings = buildStreamingCloseSettings(summaryText)
+    const finalSeq = this.nextSequence(sessionId)
+    await this.larkClient.updateCardSettings(card.cardId, closeSettings, finalSeq)
 
     await this.sessionService.setWorkingMessageId(sessionId, null)
     active.streamingCard = undefined

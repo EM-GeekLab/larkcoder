@@ -233,6 +233,17 @@ export class LarkClient {
     }
   }
 
+  async deleteCardElement(cardId: string, elementId: string, sequence: number): Promise<void> {
+    try {
+      await this.sdk.cardkit.v1.cardElement.delete({
+        path: { card_id: cardId, element_id: elementId },
+        data: { sequence },
+      })
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to delete card element")
+    }
+  }
+
   async updateCardSettings(
     cardId: string,
     settings: Record<string, unknown>,
