@@ -19,6 +19,8 @@
 
 ### 代码编辑
 
+- SHOULD 仅在关键的地方写注释，解释为什么而不是做什么
+- SHOULD NOT 大面积写注释
 - SHOULD NOT 编辑 linter/formatter 等编码标准配置文件，必须修改时须用户确认。
 - MUST NOT 编辑项目外文件（`/tmp` 等临时目录除外）。
 
