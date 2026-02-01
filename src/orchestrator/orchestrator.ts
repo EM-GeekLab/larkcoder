@@ -9,8 +9,11 @@ import type { TaskService } from "../task/service.js"
 import type { Task } from "../task/types.js"
 import type { Logger } from "../utils/logger.js"
 import { createAcpClient } from "../agent/acpClient.js"
+import { CommandHandler } from "../command/handler.js"
+import { parseCommand } from "../command/parser.js"
 import { buildStatusCard } from "../lark/cardTemplates.js"
 import { createDocTools } from "../lark/docTools.js"
+import { extractErrorMessage } from "../utils/errors.js"
 import { ThreadMapper } from "./threadMapper.js"
 
 type ActiveSession = {
@@ -18,6 +21,7 @@ type ActiveSession = {
   client: AgentClient
   sessionId: string
   lastCardUpdateAt: number
+  availableCommands: string[]
 }
 
 const CARD_THROTTLE_MS = 3000
@@ -25,6 +29,7 @@ const CARD_THROTTLE_MS = 3000
 export class Orchestrator {
   private activeSessions = new Map<string, ActiveSession>()
   private threadMapper: ThreadMapper
+  private commandHandler: CommandHandler
 
   constructor(
     private config: AppConfig,
@@ -35,10 +40,23 @@ export class Orchestrator {
     private logger: Logger,
   ) {
     this.threadMapper = new ThreadMapper(taskService)
+    this.commandHandler = new CommandHandler(
+      this,
+      taskService,
+      larkClient,
+      logger,
+    )
   }
 
   async handleMessage(message: ParsedMessage): Promise<void> {
     const threadId = message.rootId ?? message.messageId
+
+    // Check for slash command
+    const parsed = parseCommand(message.text)
+    if (parsed) {
+      await this.commandHandler.handle(parsed, message, threadId)
+      return
+    }
 
     // Check for existing active task in this thread
     const existingTask =
@@ -74,10 +92,7 @@ export class Orchestrator {
     }
   }
 
-  private async handleNewTask(
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
+  async handleNewTask(message: ParsedMessage, threadId: string): Promise<void> {
     const task = await this.taskService.createTask({
       chatId: message.chatId,
       threadId,
@@ -145,16 +160,12 @@ export class Orchestrator {
     }
   }
 
-  private async startAgent(task: Task): Promise<void> {
+  async startAgent(task: Task): Promise<void> {
     try {
       await this.taskService.startTask(task.id)
 
       // Spawn the ACP server process
-      const processInfo = await this.processManager.spawn(
-        task.id,
-        task.workingDir,
-      )
-      await this.taskService.setProcessPort(task.id, processInfo.port)
+      const processInfo = this.processManager.spawn(task.id, task.workingDir)
 
       // Build doc context if available
       const docContext = await this.docService.buildDocContext(task.docToken)
@@ -162,9 +173,9 @@ export class Orchestrator {
         .filter(Boolean)
         .join("\n")
 
-      // Create ACP client
+      // Create ACP client with stdio pipes
       const acpClient = createAcpClient({
-        port: processInfo.port,
+        process: processInfo.process,
         logger: this.logger,
         onSessionUpdate: (params) => this.handleSessionUpdate(task.id, params),
         tools: createDocTools(this.larkClient),
@@ -186,12 +197,13 @@ export class Orchestrator {
         client: acpClient,
         sessionId,
         lastCardUpdateAt: 0,
+        availableCommands: [],
       })
 
       // Send the initial prompt
       await this.runPrompt(task.id, task.prompt)
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error)
+      const msg = extractErrorMessage(error)
       this.logger
         .withError(error as Error)
         .error(`Failed to start agent for task ${task.id}`)
@@ -203,7 +215,7 @@ export class Orchestrator {
     }
   }
 
-  private async runPrompt(taskId: string, prompt: string): Promise<void> {
+  async runPrompt(taskId: string, prompt: string): Promise<void> {
     const session = this.activeSessions.get(taskId)
     if (!session) {
       this.logger.error(`No active session for task ${taskId}`)
@@ -231,7 +243,7 @@ export class Orchestrator {
       const updated = await this.taskService.getTask(taskId)
       await this.updateStatusCard(updated)
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error)
+      const msg = extractErrorMessage(error)
       this.logger
         .withError(error as Error)
         .error(`Prompt failed for task ${taskId}`)
@@ -243,7 +255,7 @@ export class Orchestrator {
     }
   }
 
-  private async continueTask(taskId: string, prompt: string): Promise<void> {
+  async continueTask(taskId: string, prompt: string): Promise<void> {
     const task = await this.taskService.getTask(taskId)
 
     let session = this.activeSessions.get(taskId)
@@ -256,21 +268,17 @@ export class Orchestrator {
 
       // Re-spawn process if needed
       if (!this.processManager.isAlive(taskId)) {
-        const processInfo = await this.processManager.spawn(
-          taskId,
-          task.workingDir,
-        )
-        await this.taskService.setProcessPort(taskId, processInfo.port)
+        this.processManager.spawn(taskId, task.workingDir)
       }
 
-      const port = this.processManager.getPort(taskId)
-      if (!port) {
-        this.logger.error(`No port for task ${taskId}`)
+      const child = this.processManager.getProcess(taskId)
+      if (!child) {
+        this.logger.error(`No process for task ${taskId}`)
         return
       }
 
       const acpClient = createAcpClient({
-        port,
+        process: child,
         logger: this.logger,
         onSessionUpdate: (params) => this.handleSessionUpdate(taskId, params),
         tools: createDocTools(this.larkClient),
@@ -287,6 +295,7 @@ export class Orchestrator {
         client: acpClient,
         sessionId: task.sessionId,
         lastCardUpdateAt: 0,
+        availableCommands: [],
       }
       this.activeSessions.set(taskId, session)
     }
@@ -298,7 +307,7 @@ export class Orchestrator {
     await this.runPrompt(taskId, prompt)
   }
 
-  private async stopTask(taskId: string): Promise<void> {
+  async stopTask(taskId: string): Promise<void> {
     const session = this.activeSessions.get(taskId)
     if (session) {
       await session.client.cancel({ sessionId: session.sessionId })
@@ -311,7 +320,7 @@ export class Orchestrator {
     await this.updateStatusCard(updated)
   }
 
-  private async markComplete(taskId: string): Promise<void> {
+  async markComplete(taskId: string): Promise<void> {
     this.processManager.kill(taskId)
     this.cleanupSession(taskId)
 
@@ -320,13 +329,27 @@ export class Orchestrator {
     await this.updateStatusCard(updated)
   }
 
-  private async retryTask(taskId: string, newPrompt?: string): Promise<void> {
+  async retryTask(taskId: string, newPrompt?: string): Promise<void> {
     this.processManager.kill(taskId)
     this.cleanupSession(taskId)
 
     const task = await this.taskService.getTask(taskId)
     await this.taskService.startTask(taskId)
     await this.startAgent({ ...task, prompt: newPrompt ?? task.prompt })
+  }
+
+  getActiveSession(
+    taskId: string,
+  ): { client: AgentClient; sessionId: string } | undefined {
+    const session = this.activeSessions.get(taskId)
+    if (!session) {
+      return undefined
+    }
+    return { client: session.client, sessionId: session.sessionId }
+  }
+
+  getAvailableCommands(taskId: string): string[] {
+    return this.activeSessions.get(taskId)?.availableCommands ?? []
   }
 
   private async handleSessionUpdate(
@@ -354,6 +377,16 @@ export class Orchestrator {
       case "tool_call":
         activity = `Tool: ${(update as Record<string, unknown>).title ?? "unknown"}`
         break
+      case "available_commands_update": {
+        const session = this.activeSessions.get(taskId)
+        if (session) {
+          const commands = (update as Record<string, unknown>).commands as
+            | Array<{ name: string }>
+            | undefined
+          session.availableCommands = commands?.map((c) => c.name) ?? []
+        }
+        break
+      }
     }
 
     if (activity) {

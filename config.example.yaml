@@ -5,10 +5,9 @@ lark:
   # doc_type: "docx"
 
 agent:
-  command: "claude"
-  args: ["--sse-port", "{{PORT}}"]
+  command: "claude-code-acp"
+  args: []
   working_dir: "/home/deploy/projects"
-  port_range: [3100, 3200]
   max_turns: 50
   # system_prompt: |
   #   你在一个自动化环境中工作。

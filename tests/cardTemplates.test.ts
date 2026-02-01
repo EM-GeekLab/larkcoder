@@ -11,7 +11,7 @@ describe("buildStatusCard", () => {
 
     const header = card.header as Record<string, unknown>
     const title = header.title as Record<string, string>
-    expect(title.content).toBe("LarkCoder - Running")
+    expect(title.content).toBe("Running")
     expect(header.template).toBe("blue")
 
     const elements = card.elements as Record<string, unknown>[]

@@ -1,5 +1,6 @@
-import type * as acp from "@agentclientprotocol/sdk"
-import { ClientSideConnection } from "@agentclientprotocol/sdk"
+import type { ChildProcess } from "node:child_process"
+import * as acp from "@agentclientprotocol/sdk"
+import { Readable, Writable } from "node:stream"
 import type { Logger } from "../utils/logger.js"
 import type {
   AgentClient,
@@ -8,22 +9,20 @@ import type {
   ToolHandler,
 } from "./types.js"
 import { ClientBridge } from "./clientBridge.js"
-import { createSseStream } from "./sseStream.js"
 
 export type CreateAcpClientOptions = {
-  port: number
+  process: ChildProcess
   logger: Logger
   onSessionUpdate: SessionUpdateCallback
   tools?: Array<{ definition: ToolDefinition; handler: ToolHandler }>
 }
 
 export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
-  const { port, logger, onSessionUpdate, tools } = options
+  const { process: child, logger, onSessionUpdate, tools } = options
 
-  const streamUrl = `http://127.0.0.1:${port}/sse`
-  const sendUrl = `http://127.0.0.1:${port}/message`
-
-  const abortController = new AbortController()
+  if (!child.stdin || !child.stdout) {
+    throw new Error("Agent process must have piped stdin and stdout")
+  }
 
   const bridge = new ClientBridge(logger)
   bridge.onSessionUpdate(onSessionUpdate)
@@ -34,20 +33,17 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
     }
   }
 
-  const stream = createSseStream({
-    streamUrl,
-    sendUrl,
-    signal: abortController.signal,
-    logger,
-  })
+  const toAgent = Writable.toWeb(child.stdin) as WritableStream<Uint8Array>
+  const fromAgent = Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>
+  const stream = acp.ndJsonStream(toAgent, fromAgent)
 
-  const connection = new ClientSideConnection(() => bridge, stream)
+  const connection = new acp.ClientSideConnection(() => bridge, stream)
 
   return {
     async initialize() {
       return connection.initialize({
         clientInfo: { name: "larkcoder", version: "0.1.0" },
-        protocolVersion: 1,
+        protocolVersion: acp.PROTOCOL_VERSION,
       })
     },
     async newSession(params: acp.NewSessionRequest) {
@@ -61,6 +57,9 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
     },
     async cancel(params: acp.CancelNotification) {
       return connection.cancel(params)
+    },
+    async setSessionMode(params: acp.SetSessionModeRequest) {
+      return connection.setSessionMode(params)
     },
     get signal() {
       return connection.signal

@@ -104,6 +104,10 @@ export class TaskService {
     await this.repo.updateCardMessageId(id, messageId)
   }
 
+  async getTasksByChatId(chatId: string): Promise<Task[]> {
+    return this.repo.findByChatId(chatId)
+  }
+
   async isEventProcessed(eventId: string): Promise<boolean> {
     return this.repo.isEventProcessed(eventId)
   }

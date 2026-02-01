@@ -35,7 +35,6 @@ async function main(): Promise<void> {
   const processManager = new ProcessManager({
     command: config.agent.command,
     args: config.agent.args,
-    portRange: config.agent.portRange,
     logger: createLogger({ prefix: "process" }),
   })
 

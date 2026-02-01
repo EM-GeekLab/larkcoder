@@ -16,10 +16,9 @@ describe("appConfigSchema", () => {
     const result = appConfigSchema.parse(validConfig)
     expect(result.lark.appId).toBe("cli_test")
     expect(result.lark.appSecret).toBe("secret123")
-    expect(result.agent.command).toBe("claude")
+    expect(result.agent.command).toBe("claude-code-acp")
     expect(result.agent.args).toEqual([])
     expect(result.agent.workingDir).toBe("/home/deploy")
-    expect(result.agent.portRange).toEqual([3100, 3200])
     expect(result.database.path).toBe("data/larkcoder.db")
   })
 
@@ -33,9 +32,8 @@ describe("appConfigSchema", () => {
       },
       agent: {
         ...validConfig.agent,
-        command: "/usr/local/bin/claude",
-        args: ["--sse-port", "{{PORT}}"],
-        port_range: [4000, 4100],
+        command: "/usr/local/bin/claude-code-acp",
+        args: ["--verbose"],
         max_turns: 30,
         system_prompt: "You are helpful.",
       },
@@ -45,9 +43,8 @@ describe("appConfigSchema", () => {
     const result = appConfigSchema.parse(full)
     expect(result.lark.docToken).toBe("doxcn123")
     expect(result.lark.docType).toBe("docx")
-    expect(result.agent.command).toBe("/usr/local/bin/claude")
-    expect(result.agent.args).toEqual(["--sse-port", "{{PORT}}"])
-    expect(result.agent.portRange).toEqual([4000, 4100])
+    expect(result.agent.command).toBe("/usr/local/bin/claude-code-acp")
+    expect(result.agent.args).toEqual(["--verbose"])
     expect(result.agent.maxTurns).toBe(30)
     expect(result.agent.systemPrompt).toBe("You are helpful.")
     expect(result.database.path).toBe("/tmp/test.db")
@@ -58,7 +55,6 @@ describe("appConfigSchema", () => {
     expect(result.lark).toHaveProperty("appId")
     expect(result.lark).toHaveProperty("appSecret")
     expect(result.agent).toHaveProperty("workingDir")
-    expect(result.agent).toHaveProperty("portRange")
   })
 
   it("rejects missing lark.app_id", () => {

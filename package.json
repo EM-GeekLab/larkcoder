@@ -14,15 +14,16 @@
     "fmt:check": "oxfmt --check",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "acp-cli": "bun tools/acp-cli.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.13.1",
     "@larksuiteoapi/node-sdk": "^1.58.0",
     "@libsql/client": "^0.17.0",
     "@loglayer/transport-simple-pretty-terminal": "^2.3.1",
+    "@zed-industries/claude-code-acp": "^0.13.2",
     "drizzle-orm": "^0.45.1",
-    "get-port": "^7.1.0",
     "loglayer": "^8.4.0",
     "serialize-error": "^13.0.1",
     "yaml": "^2.5.1",

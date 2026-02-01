@@ -1,4 +1,5 @@
 import type * as acp from "@agentclientprotocol/sdk"
+import type { ChildProcess } from "node:child_process"
 
 export type AgentClient = {
   initialize(): Promise<acp.InitializeResponse>
@@ -8,6 +9,9 @@ export type AgentClient = {
   ): Promise<acp.ResumeSessionResponse>
   prompt(params: acp.PromptRequest): Promise<acp.PromptResponse>
   cancel(params: acp.CancelNotification): Promise<void>
+  setSessionMode(
+    params: acp.SetSessionModeRequest,
+  ): Promise<acp.SetSessionModeResponse>
   readonly signal: AbortSignal
   readonly closed: Promise<void>
 }
@@ -31,7 +35,7 @@ export type ToolHandler = (request: ToolCallRequest) => Promise<unknown>
 
 export type AgentProcessInfo = {
   taskId: string
-  port: number
+  process: ChildProcess
   pid: number
   kill: () => void
 }

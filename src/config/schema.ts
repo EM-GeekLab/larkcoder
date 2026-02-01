@@ -9,12 +9,9 @@ const rawConfigSchema = z.object({
   }),
 
   agent: z.object({
-    command: z.string().min(1).default("claude"),
+    command: z.string().min(1).default("claude-code-acp"),
     args: z.array(z.string()).default([]),
     working_dir: z.string().min(1),
-    port_range: z
-      .tuple([z.number().int().positive(), z.number().int().positive()])
-      .default([3100, 3200]),
     max_turns: z.number().int().positive().optional(),
     system_prompt: z.string().optional(),
   }),
@@ -39,7 +36,6 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
     command: raw.agent.command,
     args: raw.agent.args,
     workingDir: raw.agent.working_dir,
-    portRange: raw.agent.port_range as [number, number],
     maxTurns: raw.agent.max_turns,
     systemPrompt: raw.agent.system_prompt,
   },

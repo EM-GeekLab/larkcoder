@@ -1,8 +1,8 @@
 import * as acp from "@agentclientprotocol/sdk"
 /**
- * Integration test for ACP (Agent Client Protocol) communication with Claude Code.
+ * Integration test for ACP (Agent Client Protocol) communication via stdio NDJSON.
  *
- * Requires `claude` CLI to be installed and available in PATH.
+ * Requires `claude-code-acp` to be installed and available in PATH.
  * Set CLAUDECODE=1 to run: CLAUDECODE=1 bun run test
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test"
@@ -19,13 +19,11 @@ describe.skipIf(!process.env.CLAUDECODE)("ACP Integration", () => {
   const sessionUpdates: acp.SessionNotification[] = []
 
   beforeAll(async () => {
-    // Spawn claude as a subprocess with stdio pipes
-    agentProcess = spawn("claude", [], {
+    // Spawn claude-code-acp as a subprocess with stdio pipes
+    agentProcess = spawn("claude-code-acp", [], {
       stdio: ["pipe", "pipe", "inherit"],
       env: {
         ...process.env,
-        // Ensure non-interactive mode
-        DISABLE_INTERACTIVITY: "1",
       },
     })
 
