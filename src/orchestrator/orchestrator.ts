@@ -13,6 +13,7 @@ import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import { buildStatusCard } from "../lark/cardTemplates.js"
 import { createDocTools } from "../lark/docTools.js"
+import { throttle } from "radashi"
 import { extractErrorMessage } from "../utils/errors.js"
 import { ThreadMapper } from "./threadMapper.js"
 
@@ -20,11 +21,9 @@ type ActiveSession = {
   taskId: string
   client: AgentClient
   sessionId: string
-  lastCardUpdateAt: number
+  throttledCardUpdate: ReturnType<typeof throttle>
   availableCommands: string[]
 }
-
-const CARD_THROTTLE_MS = 3000
 
 export class Orchestrator {
   private activeSessions = new Map<string, ActiveSession>()
@@ -166,6 +165,9 @@ export class Orchestrator {
 
       // Spawn the ACP server process
       const processInfo = this.processManager.spawn(task.id, task.workingDir)
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .debug("Agent process spawned")
 
       // Build doc context if available
       const docContext = await this.docService.buildDocContext(task.docToken)
@@ -182,7 +184,13 @@ export class Orchestrator {
       })
 
       // Initialize and create session
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .debug("Initializing ACP connection")
       await acpClient.initialize()
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .debug("ACP connection initialized, creating session")
       const sessionResponse = await acpClient.newSession({
         cwd: task.workingDir,
         mcpServers: [],
@@ -191,16 +199,27 @@ export class Orchestrator {
 
       const sessionId = sessionResponse.sessionId
       await this.taskService.setSessionId(task.id, sessionId)
+      this.logger
+        .withMetadata({ taskId: task.id, sessionId })
+        .debug("ACP session created")
 
       this.activeSessions.set(task.id, {
         taskId: task.id,
         client: acpClient,
         sessionId,
-        lastCardUpdateAt: 0,
+        throttledCardUpdate: throttle(
+          { interval: 10_000, trailing: true },
+          (activity: string) => {
+            void this.doCardUpdate(task.id, activity)
+          },
+        ),
         availableCommands: [],
       })
 
       // Send the initial prompt
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .debug("Sending initial prompt to agent")
       await this.runPrompt(task.id, task.prompt)
     } catch (error: unknown) {
       const msg = extractErrorMessage(error)
@@ -221,6 +240,10 @@ export class Orchestrator {
       this.logger.error(`No active session for task ${taskId}`)
       return
     }
+
+    this.logger
+      .withMetadata({ taskId, promptLength: prompt.length })
+      .debug("Sending prompt to agent")
 
     try {
       const response = await session.client.prompt({
@@ -294,7 +317,12 @@ export class Orchestrator {
         taskId,
         client: acpClient,
         sessionId: task.sessionId,
-        lastCardUpdateAt: 0,
+        throttledCardUpdate: throttle(
+          { interval: 10_000, trailing: true },
+          (activity: string) => {
+            void this.doCardUpdate(taskId, activity)
+          },
+        ),
         availableCommands: [],
       }
       this.activeSessions.set(taskId, session)
@@ -358,6 +386,9 @@ export class Orchestrator {
   ): Promise<void> {
     const update = params.update
     if (!update) {
+      this.logger
+        .withMetadata({ taskId })
+        .debug("Received empty session update")
       return
     }
 
@@ -366,6 +397,10 @@ export class Orchestrator {
     const updateType = (update as Record<string, unknown>).sessionUpdate as
       | string
       | undefined
+
+    this.logger
+      .withMetadata({ taskId, updateType })
+      .trace("Session update received")
 
     switch (updateType) {
       case "agent_message_chunk":
@@ -376,6 +411,12 @@ export class Orchestrator {
         break
       case "tool_call":
         activity = `Tool: ${(update as Record<string, unknown>).title ?? "unknown"}`
+        this.logger
+          .withMetadata({
+            taskId,
+            tool: (update as Record<string, unknown>).title,
+          })
+          .debug("Agent tool call")
         break
       case "available_commands_update": {
         const session = this.activeSessions.get(taskId)
@@ -387,28 +428,30 @@ export class Orchestrator {
         }
         break
       }
+      default:
+        this.logger
+          .withMetadata({ taskId, updateType })
+          .debug("Unknown session update type")
+        break
     }
 
     if (activity) {
-      await this.throttledCardUpdate(taskId, activity)
+      this.throttledCardUpdate(taskId, activity)
     }
   }
 
-  private async throttledCardUpdate(
-    taskId: string,
-    activity: string,
-  ): Promise<void> {
+  private throttledCardUpdate(taskId: string, activity: string): void {
     const session = this.activeSessions.get(taskId)
     if (!session) {
+      this.logger
+        .withMetadata({ taskId })
+        .debug("Throttled card update skipped: no session")
       return
     }
+    session.throttledCardUpdate(activity)
+  }
 
-    const now = Date.now()
-    if (now - session.lastCardUpdateAt < CARD_THROTTLE_MS) {
-      return
-    }
-    session.lastCardUpdateAt = now
-
+  private async doCardUpdate(taskId: string, activity: string): Promise<void> {
     const task = await this.taskService.getTask(taskId)
     const card = buildStatusCard({
       taskId: task.id,
@@ -419,7 +462,14 @@ export class Orchestrator {
     })
 
     if (task.cardMessageId) {
+      this.logger
+        .withMetadata({ taskId, cardMessageId: task.cardMessageId, activity })
+        .debug("Updating status card (throttled)")
       await this.larkClient.updateCard(task.cardMessageId, card)
+    } else {
+      this.logger
+        .withMetadata({ taskId })
+        .debug("Skipped card update: no cardMessageId")
     }
   }
 
@@ -433,16 +483,37 @@ export class Orchestrator {
       prompt: task.prompt,
     })
 
+    this.logger
+      .withMetadata({ taskId: task.id, replyToMessageId })
+      .debug("Sending initial status card")
     const messageId = await this.larkClient.replyCard(replyToMessageId, card)
     if (messageId) {
+      this.logger
+        .withMetadata({ taskId: task.id, cardMessageId: messageId })
+        .debug("Status card sent")
       await this.taskService.setCardMessageId(task.id, messageId)
+    } else {
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .warn("Failed to get cardMessageId from replyCard")
     }
   }
 
   private async updateStatusCard(task: Task): Promise<void> {
     if (!task.cardMessageId) {
+      this.logger
+        .withMetadata({ taskId: task.id })
+        .debug("Skipped final card update: no cardMessageId")
       return
     }
+
+    this.logger
+      .withMetadata({
+        taskId: task.id,
+        status: task.status,
+        cardMessageId: task.cardMessageId,
+      })
+      .debug("Updating final status card")
 
     const card = buildStatusCard({
       taskId: task.id,

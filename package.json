@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "NODE_ENV=development bun src/index.ts",
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit",
     "test": "bun test",
@@ -25,6 +25,7 @@
     "@zed-industries/claude-code-acp": "^0.13.2",
     "drizzle-orm": "^0.45.1",
     "loglayer": "^8.4.0",
+    "radashi": "^12.7.1",
     "serialize-error": "^13.0.1",
     "yaml": "^2.5.1",
     "zod": "^4.3.6"

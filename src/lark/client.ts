@@ -37,6 +37,9 @@ export class LarkClient {
     text: string,
   ): Promise<string | undefined> {
     try {
+      this.logger
+        .withMetadata({ messageId, textLength: text.length })
+        .debug("Replying text")
       const resp = await this.sdk.im.message.reply({
         path: { message_id: messageId },
         data: {
@@ -44,6 +47,9 @@ export class LarkClient {
           msg_type: "text",
         },
       })
+      this.logger
+        .withMetadata({ messageId, replyMessageId: resp.data?.message_id })
+        .debug("Reply text sent")
       return resp.data?.message_id
     } catch (error: unknown) {
       this.logger.withError(error as Error).error("Failed to reply text")
@@ -93,6 +99,7 @@ export class LarkClient {
     card: Record<string, unknown>,
   ): Promise<string | undefined> {
     try {
+      this.logger.withMetadata({ messageId }).debug("Replying card")
       const resp = await this.sdk.im.message.reply({
         path: { message_id: messageId },
         data: {
@@ -100,6 +107,9 @@ export class LarkClient {
           msg_type: "interactive",
         },
       })
+      this.logger
+        .withMetadata({ messageId, replyMessageId: resp.data?.message_id })
+        .debug("Reply card sent")
       return resp.data?.message_id
     } catch (error: unknown) {
       this.logger.withError(error as Error).error("Failed to reply card")
@@ -112,10 +122,12 @@ export class LarkClient {
     card: Record<string, unknown>,
   ): Promise<void> {
     try {
+      this.logger.withMetadata({ messageId }).debug("Updating card")
       await this.sdk.im.message.patch({
         path: { message_id: messageId },
         data: { content: JSON.stringify(card) },
       })
+      this.logger.withMetadata({ messageId }).debug("Card updated")
     } catch (error: unknown) {
       this.logger.withError(error as Error).error("Failed to update card")
     }
