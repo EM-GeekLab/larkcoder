@@ -126,17 +126,57 @@ describe("LarkEventHandler", () => {
       return (handler as any).parseCardAction(data)
     }
 
-    it("parses a card action", () => {
+    it("parses a permission_select card action", () => {
       const result = parse({
         operator: { open_id: "user_1" },
         context: { open_message_id: "msg_1", open_chat_id: "chat_1" },
-        action: { value: { action: "stop", task_id: "t1" } },
+        action: {
+          value: {
+            action: "permission_select",
+            session_id: "s1",
+            option_id: "allow",
+          },
+        },
       })
 
       expect(result).not.toBeNull()
-      expect(result.action).toBe("stop")
-      expect(result.taskId).toBe("t1")
+      expect(result.action).toBe("permission_select")
+      expect(result.sessionId).toBe("s1")
+      expect(result.optionId).toBe("allow")
       expect(result.openId).toBe("user_1")
+    })
+
+    it("parses a session_select card action", () => {
+      const result = parse({
+        operator: { open_id: "user_1" },
+        context: { open_message_id: "msg_1", open_chat_id: "chat_1" },
+        action: {
+          value: { action: "session_select", session_id: "s1" },
+        },
+      })
+
+      expect(result).not.toBeNull()
+      expect(result.action).toBe("session_select")
+      expect(result.sessionId).toBe("s1")
+    })
+
+    it("parses a model_select card action", () => {
+      const result = parse({
+        operator: { open_id: "user_1" },
+        context: { open_message_id: "msg_1", open_chat_id: "chat_1" },
+        action: {
+          value: {
+            action: "model_select",
+            session_id: "s1",
+            model_id: "sonnet",
+          },
+        },
+      })
+
+      expect(result).not.toBeNull()
+      expect(result.action).toBe("model_select")
+      expect(result.sessionId).toBe("s1")
+      expect(result.modelId).toBe("sonnet")
     })
 
     it("returns null when action value is missing", () => {

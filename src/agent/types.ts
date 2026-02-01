@@ -12,9 +12,17 @@ export type AgentClient = {
   setSessionMode(
     params: acp.SetSessionModeRequest,
   ): Promise<acp.SetSessionModeResponse>
+  setSessionModel(params: {
+    sessionId: string
+    modelId: string
+  }): Promise<unknown>
   readonly signal: AbortSignal
   readonly closed: Promise<void>
 }
+
+export type PermissionRequestCallback = (
+  params: acp.RequestPermissionRequest,
+) => Promise<acp.RequestPermissionResponse>
 
 export type SessionUpdateCallback = (
   params: acp.SessionNotification,
@@ -34,7 +42,7 @@ export type ToolCallRequest = {
 export type ToolHandler = (request: ToolCallRequest) => Promise<unknown>
 
 export type AgentProcessInfo = {
-  taskId: string
+  sessionId: string
   process: ChildProcess
   pid: number
   kill: () => void

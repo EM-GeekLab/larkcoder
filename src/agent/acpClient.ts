@@ -4,6 +4,7 @@ import { Readable, Writable } from "node:stream"
 import type { Logger } from "../utils/logger.js"
 import type {
   AgentClient,
+  PermissionRequestCallback,
   SessionUpdateCallback,
   ToolDefinition,
   ToolHandler,
@@ -14,11 +15,18 @@ export type CreateAcpClientOptions = {
   process: ChildProcess
   logger: Logger
   onSessionUpdate: SessionUpdateCallback
+  onPermissionRequest?: PermissionRequestCallback
   tools?: Array<{ definition: ToolDefinition; handler: ToolHandler }>
 }
 
 export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
-  const { process: child, logger, onSessionUpdate, tools } = options
+  const {
+    process: child,
+    logger,
+    onSessionUpdate,
+    onPermissionRequest,
+    tools,
+  } = options
 
   if (!child.stdin || !child.stdout) {
     throw new Error("Agent process must have piped stdin and stdout")
@@ -26,6 +34,10 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
 
   const bridge = new ClientBridge(logger)
   bridge.onSessionUpdate(onSessionUpdate)
+
+  if (onPermissionRequest) {
+    bridge.onPermissionRequest(onPermissionRequest)
+  }
 
   if (tools) {
     for (const { definition, handler } of tools) {
@@ -60,6 +72,13 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
     },
     async setSessionMode(params: acp.SetSessionModeRequest) {
       return connection.setSessionMode(params)
+    },
+    async setSessionModel(params: { sessionId: string; modelId: string }) {
+      return (
+        (
+          connection as unknown as Record<string, Function>
+        ).unstable_setSessionModel?.(params) ?? {}
+      )
     },
     get signal() {
       return connection.signal

@@ -1,6 +1,7 @@
 import type * as acp from "@agentclientprotocol/sdk"
 import type { Logger } from "../utils/logger.js"
 import type {
+  PermissionRequestCallback,
   SessionUpdateCallback,
   ToolCallRequest,
   ToolDefinition,
@@ -14,11 +15,16 @@ export class ClientBridge implements acp.Client {
   private tools = new Map<string, ToolHandler>()
   private toolDefinitions = new Map<string, ToolDefinition>()
   private onSessionUpdateCallback?: SessionUpdateCallback
+  private onPermissionRequestCallback?: PermissionRequestCallback
 
   constructor(private logger: Logger) {}
 
   onSessionUpdate(callback: SessionUpdateCallback): void {
     this.onSessionUpdateCallback = callback
+  }
+
+  onPermissionRequest(callback: PermissionRequestCallback): void {
+    this.onPermissionRequestCallback = callback
   }
 
   registerTool(definition: ToolDefinition, handler: ToolHandler): void {
@@ -42,6 +48,11 @@ export class ClientBridge implements acp.Client {
   async requestPermission(
     params: acp.RequestPermissionRequest,
   ): Promise<acp.RequestPermissionResponse> {
+    if (this.onPermissionRequestCallback) {
+      return this.onPermissionRequestCallback(params)
+    }
+
+    // Fallback: auto-approve first option
     const option = params.options[0]
     if (!option) {
       return { outcome: { outcome: "cancelled" } }

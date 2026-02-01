@@ -19,5 +19,7 @@ export type CardAction = {
   openMessageId: string
   openChatId: string
   action: string
-  taskId?: string
+  sessionId?: string
+  optionId?: string
+  modelId?: string
 }

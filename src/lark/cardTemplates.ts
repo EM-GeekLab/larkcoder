@@ -1,22 +1,4 @@
-import type { TaskStatus } from "../task/types.js"
-
-type CardData = {
-  taskId: string
-  status: TaskStatus
-  prompt: string
-  summary?: string
-  lastActivity?: string
-  errorMessage?: string
-}
-
-const headerTemplates: Record<string, { title: string; template: string }> = {
-  pending: { title: "Pending", template: "grey" },
-  running: { title: "Running", template: "blue" },
-  waiting: { title: "Waiting", template: "orange" },
-  completed: { title: "Completed", template: "green" },
-  failed: { title: "Failed", template: "red" },
-  cancelled: { title: "Cancelled", template: "grey" },
-}
+import type { Session } from "../session/types.js"
 
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) {
@@ -25,81 +7,167 @@ function truncate(text: string, maxLen: number): string {
   return `${text.slice(0, maxLen)}...`
 }
 
-export function buildStatusCard(data: CardData): Record<string, unknown> {
-  const header = headerTemplates[data.status] ?? headerTemplates.pending!
+type PostElement = Record<string, unknown>
 
-  const lines: string[] = [`**Task:** ${truncate(data.prompt, 100)}`]
+export function buildWorkingPost(text: string): Record<string, unknown> {
+  return { zh_cn: { title: "", content: [[{ tag: "text", text }]] } }
+}
 
-  if (data.summary) {
-    lines.push(`**Summary:** ${truncate(data.summary, 200)}`)
-  }
+type PermissionCardData = {
+  sessionId: string
+  toolDescription: string
+  options: Array<{ optionId: string; label: string }>
+}
 
-  if (data.lastActivity) {
-    lines.push(`**Activity:** ${truncate(data.lastActivity, 150)}`)
-  }
-
-  if (data.errorMessage) {
-    lines.push(`**Error:** ${truncate(data.errorMessage, 200)}`)
-  }
-
-  const elements: Record<string, unknown>[] = [
-    { tag: "markdown", content: lines.join("\n") },
-  ]
-
-  const actions = buildActions(data)
-  if (actions.length > 0) {
-    elements.push({ tag: "action", actions })
-  }
+export function buildPermissionCard(
+  data: PermissionCardData,
+): Record<string, unknown> {
+  const actions = data.options.map((opt, idx) => ({
+    tag: "button",
+    text: { tag: "plain_text", content: `${idx + 1}` },
+    type: idx === 0 ? "primary" : "default",
+    value: {
+      action: "permission_select",
+      session_id: data.sessionId,
+      option_id: opt.optionId,
+    },
+  }))
 
   return {
     config: { wide_screen_mode: true },
-    header: {
-      title: { tag: "plain_text", content: header.title },
-      template: header.template,
-    },
-    elements,
+    elements: [
+      {
+        tag: "markdown",
+        content: data.toolDescription,
+      },
+      ...(data.options.length > 1
+        ? [
+            {
+              tag: "markdown",
+              content: data.options
+                .map((opt, idx) => `**${idx + 1}.** ${opt.label}`)
+                .join("\n"),
+            },
+          ]
+        : []),
+      { tag: "action", actions },
+    ],
   }
 }
 
-function buildActions(data: CardData): Record<string, unknown>[] {
-  const actions: Record<string, unknown>[] = []
+type SessionListCardData = {
+  sessions: Session[]
+}
 
-  switch (data.status) {
-    case "running":
-      actions.push({
-        tag: "button",
-        text: { tag: "plain_text", content: "Stop" },
-        type: "danger",
-        value: { action: "stop", task_id: data.taskId },
-      })
-      break
+export function buildSessionListCard(
+  data: SessionListCardData,
+): Record<string, unknown> {
+  const lines = data.sessions.map((s, idx) => {
+    const prompt = truncate(s.initialPrompt, 40)
+    const time = s.updatedAt.replace("T", " ").slice(0, 19)
+    return `**${idx + 1}.** ${prompt}  \`${time}\``
+  })
 
-    case "waiting":
-      actions.push(
-        {
-          tag: "button",
-          text: { tag: "plain_text", content: "Continue" },
-          type: "primary",
-          value: { action: "continue", task_id: data.taskId },
-        },
-        {
-          tag: "button",
-          text: { tag: "plain_text", content: "Done" },
-          type: "default",
-          value: { action: "complete", task_id: data.taskId },
-        },
-      )
-      break
+  const actions = data.sessions.map((s, idx) => ({
+    tag: "button",
+    text: { tag: "plain_text", content: `${idx + 1}` },
+    type: "default",
+    value: {
+      action: "session_select",
+      session_id: s.id,
+    },
+  }))
 
-    case "failed":
-      actions.push({
-        tag: "button",
-        text: { tag: "plain_text", content: "Retry" },
-        type: "primary",
-        value: { action: "retry", task_id: data.taskId },
-      })
-      break
+  return {
+    config: { wide_screen_mode: true },
+    elements: [
+      { tag: "markdown", content: lines.join("\n") },
+      { tag: "action", actions },
+    ],
+  }
+}
+
+export function buildSessionDeleteCard(
+  data: SessionListCardData,
+): Record<string, unknown> {
+  const lines = data.sessions.map((s, idx) => {
+    const prompt = truncate(s.initialPrompt, 40)
+    const time = s.updatedAt.replace("T", " ").slice(0, 19)
+    return `**${idx + 1}.** ${prompt}  \`${time}\``
+  })
+
+  const actions = data.sessions.map((s, idx) => ({
+    tag: "button",
+    text: { tag: "plain_text", content: `${idx + 1}` },
+    type: "danger",
+    value: {
+      action: "session_delete",
+      session_id: s.id,
+    },
+  }))
+
+  return {
+    config: { wide_screen_mode: true },
+    elements: [
+      { tag: "markdown", content: lines.join("\n") },
+      { tag: "action", actions },
+    ],
+  }
+}
+
+type ModelSelectCardData = {
+  sessionId: string
+  models: Array<{ modelId: string; label: string }>
+}
+
+export function buildModelSelectCard(
+  data: ModelSelectCardData,
+): Record<string, unknown> {
+  const actions = data.models.map((m) => ({
+    tag: "button",
+    text: { tag: "plain_text", content: m.label },
+    type: "default",
+    value: {
+      action: "model_select",
+      session_id: data.sessionId,
+      model_id: m.modelId,
+    },
+  }))
+
+  return {
+    config: { wide_screen_mode: true },
+    elements: [{ tag: "action", actions }],
+  }
+}
+
+export function buildSelectedCard(text: string): Record<string, unknown> {
+  return {
+    config: { wide_screen_mode: true },
+    elements: [{ tag: "markdown", content: text }],
+  }
+}
+
+export function buildResultPost(text: string): Record<string, unknown> {
+  const content: PostElement[][] = []
+
+  if (text) {
+    content.push([{ tag: "text", text: truncate(text, 4000) }])
   }
 
-  return actions
+  if (content.length === 0) {
+    content.push([{ tag: "text", text: "(no output)" }])
+  }
+
+  return { zh_cn: { title: "", content } }
+}
+
+export function buildErrorPost(error: string): Record<string, unknown> {
+  const content: PostElement[][] = [
+    [
+      { tag: "text", text: "Error: ", style: ["bold"] },
+      { tag: "text", text: truncate(error, 2000) },
+    ],
+  ]
+
+  return { zh_cn: { title: "", content } }
 }

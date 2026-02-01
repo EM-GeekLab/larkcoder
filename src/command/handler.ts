@@ -1,38 +1,39 @@
 import type { LarkClient } from "../lark/client.js"
 import type { ParsedMessage } from "../lark/types.js"
 import type { Orchestrator } from "../orchestrator/orchestrator.js"
-import type { TaskService } from "../task/service.js"
+import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { ParsedCommand } from "./parser.js"
-import { extractErrorMessage } from "../utils/errors.js"
 
 const LOCAL_COMMANDS = new Set([
   "stop",
-  "done",
-  "retry",
   "new",
-  "status",
+  "clear",
   "list",
+  "resume",
+  "delete",
+  "plan",
+  "info",
+  "model",
   "help",
 ])
 
-const ACP_COMMANDS = new Set(["mode", "model"])
-
 const HELP_TEXT = `Available commands:
-/stop — Cancel the running task
-/done — Mark the current task as complete
-/retry [prompt] — Retry the failed task (optionally with a new prompt)
-/new <prompt> — Create a new task in this thread
-/status — Show current task status
-/list — List recent tasks in this chat
 /help — Show this help message
-/mode <name> — Switch session mode (ask/code/plan)
-/model <name> — Switch model`
+/new [prompt] — Create a new session (with optional initial prompt)
+/clear [prompt] — Alias for /new
+/list — List recent sessions in this chat
+/resume — Alias for /list
+/delete — Delete a session
+/stop — Stop the running agent
+/plan — Toggle plan mode
+/info — Show current session info
+/model — Select model`
 
 export class CommandHandler {
   constructor(
     private orchestrator: Orchestrator,
-    private taskService: TaskService,
+    private sessionService: SessionService,
     private larkClient: LarkClient,
     private logger: Logger,
   ) {}
@@ -40,25 +41,22 @@ export class CommandHandler {
   async handle(
     parsed: ParsedCommand,
     message: ParsedMessage,
-    threadId: string,
+    _threadId: string,
   ): Promise<void> {
     this.logger
       .withMetadata({ command: parsed.command, args: parsed.args })
       .info("Handling slash command")
 
     if (LOCAL_COMMANDS.has(parsed.command)) {
-      await this.handleLocal(parsed, message, threadId)
-    } else if (ACP_COMMANDS.has(parsed.command)) {
-      await this.handleAcp(parsed, message, threadId)
+      await this.handleLocal(parsed, message)
     } else {
-      await this.handlePassthrough(parsed, message, threadId)
+      await this.handlePassthrough(parsed, message)
     }
   }
 
   private async handleLocal(
     parsed: ParsedCommand,
     message: ParsedMessage,
-    threadId: string,
   ): Promise<void> {
     switch (parsed.command) {
       case "help":
@@ -66,221 +64,120 @@ export class CommandHandler {
         break
 
       case "stop":
-        await this.handleStop(message, threadId)
-        break
-
-      case "done":
-        await this.handleDone(message, threadId)
-        break
-
-      case "retry":
-        await this.handleRetry(parsed.args, message, threadId)
+        await this.handleStop(message)
         break
 
       case "new":
-        await this.handleNew(parsed.args, message, threadId)
-        break
-
-      case "status":
-        await this.handleStatus(message, threadId)
+      case "clear":
+        await this.handleNew(parsed.args, message)
         break
 
       case "list":
+      case "resume":
         await this.handleList(message)
+        break
+
+      case "delete":
+        await this.handleDelete(message)
+        break
+
+      case "plan":
+        await this.handlePlan(message)
+        break
+
+      case "info":
+        await this.handleInfo(message)
+        break
+
+      case "model":
+        await this.handleModel(message)
         break
     }
   }
 
-  private async handleStop(
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task || task.status === "completed" || task.status === "cancelled") {
+  private async handleStop(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
       await this.larkClient.replyText(
         message.messageId,
-        "No active task in this thread.",
+        "No active session found.",
       )
       return
     }
-    await this.orchestrator.stopTask(task.id)
+    await this.orchestrator.stopSession(session.id)
+    await this.larkClient.replyText(message.messageId, "Session stopped.")
   }
 
-  private async handleDone(
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task || task.status === "completed" || task.status === "cancelled") {
-      await this.larkClient.replyText(
+  private async handleNew(args: string, message: ParsedMessage): Promise<void> {
+    if (args) {
+      await this.orchestrator.handleNewSession(
+        { ...message, text: args },
         message.messageId,
-        "No active task in this thread.",
       )
-      return
+    } else {
+      await this.orchestrator.handleNewSession(message, message.messageId)
     }
-    await this.orchestrator.markComplete(task.id)
   }
 
-  private async handleRetry(
-    args: string,
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task) {
-      await this.larkClient.replyText(
-        message.messageId,
-        "No task found in this thread.",
-      )
-      return
-    }
-    if (task.status !== "failed" && task.status !== "waiting") {
-      await this.larkClient.replyText(
-        message.messageId,
-        `Cannot retry task in ${task.status} state.`,
-      )
-      return
-    }
-    await this.orchestrator.retryTask(task.id, args || undefined)
+  private async handleList(message: ParsedMessage): Promise<void> {
+    await this.orchestrator.handleListSessions(message)
   }
 
-  private async handleNew(
-    args: string,
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    if (!args) {
-      await this.larkClient.replyText(message.messageId, "Usage: /new <prompt>")
-      return
-    }
-    await this.orchestrator.handleNewTask({ ...message, text: args }, threadId)
+  private async handleDelete(message: ParsedMessage): Promise<void> {
+    await this.orchestrator.handleDeleteSessions(message)
   }
 
-  private async handleStatus(
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task) {
+  private async handlePlan(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
       await this.larkClient.replyText(
         message.messageId,
-        "No task found in this thread.",
+        "No active session found.",
       )
+      return
+    }
+    const newMode = !session.isPlanMode
+    await this.sessionService.setPlanMode(session.id, newMode)
+    const label = newMode ? "Plan mode enabled" : "Plan mode disabled"
+    await this.larkClient.replyText(message.messageId, label)
+  }
+
+  private async handleInfo(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyText(message.messageId, "No session found.")
       return
     }
 
     const lines = [
-      `Task: ${task.id}`,
-      `Status: ${task.status}`,
-      `Prompt: ${task.prompt.slice(0, 100)}`,
+      `Session: ${session.id}`,
+      `Status: ${session.status}`,
+      `Prompt: ${session.initialPrompt.slice(0, 100)}`,
+      `Plan mode: ${session.isPlanMode ? "on" : "off"}`,
+      `Created: ${session.createdAt}`,
     ]
-    if (task.summary) {
-      lines.push(`Summary: ${task.summary.slice(0, 200)}`)
-    }
-    if (task.errorMessage) {
-      lines.push(`Error: ${task.errorMessage.slice(0, 200)}`)
-    }
-    lines.push(`Created: ${task.createdAt}`)
 
     await this.larkClient.replyText(message.messageId, lines.join("\n"))
   }
 
-  private async handleList(message: ParsedMessage): Promise<void> {
-    const tasks = await this.taskService.getTasksByChatId(message.chatId)
-    if (tasks.length === 0) {
-      await this.larkClient.replyText(
-        message.messageId,
-        "No tasks found in this chat.",
-      )
-      return
-    }
-
-    const lines = tasks.slice(0, 10).map((t) => {
-      const prompt =
-        t.prompt.length > 50 ? `${t.prompt.slice(0, 50)}...` : t.prompt
-      return `[${t.status}] ${prompt} (${t.createdAt})`
-    })
-
-    await this.larkClient.replyText(message.messageId, lines.join("\n"))
-  }
-
-  private async handleAcp(
-    parsed: ParsedCommand,
-    message: ParsedMessage,
-    threadId: string,
-  ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task || task.status !== "running") {
-      await this.larkClient.replyText(
-        message.messageId,
-        "No running task in this thread.",
-      )
-      return
-    }
-
-    const session = this.orchestrator.getActiveSession(task.id)
+  private async handleModel(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
     if (!session) {
       await this.larkClient.replyText(
         message.messageId,
-        "No active session for this task.",
+        "No active session found.",
       )
       return
     }
-
-    switch (parsed.command) {
-      case "mode": {
-        if (!parsed.args) {
-          await this.larkClient.replyText(
-            message.messageId,
-            "Usage: /mode <ask|code|plan>",
-          )
-          return
-        }
-        try {
-          await session.client.setSessionMode({
-            sessionId: session.sessionId,
-            modeId: parsed.args,
-          })
-          await this.larkClient.replyText(
-            message.messageId,
-            `Mode switched to: ${parsed.args}`,
-          )
-        } catch (error: unknown) {
-          const msg = extractErrorMessage(error)
-          await this.larkClient.replyText(
-            message.messageId,
-            `Failed to switch mode: ${msg}`,
-          )
-        }
-        break
-      }
-
-      case "model": {
-        if (!parsed.args) {
-          await this.larkClient.replyText(
-            message.messageId,
-            "Usage: /model <model-name>",
-          )
-          return
-        }
-        // unstable_setSessionModel is not yet exposed in our AgentClient interface,
-        // so forward as a prompt for now
-        await this.larkClient.replyText(
-          message.messageId,
-          "Model switching is not yet supported.",
-        )
-        break
-      }
-    }
+    await this.orchestrator.handleModelSelect(session.id, message)
   }
 
   private async handlePassthrough(
     parsed: ParsedCommand,
     message: ParsedMessage,
-    threadId: string,
   ): Promise<void> {
-    const task = await this.taskService.getTaskByThread(threadId)
-    if (!task) {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
       await this.larkClient.replyText(
         message.messageId,
         `Unknown command: /${parsed.command}`,
@@ -288,23 +185,29 @@ export class CommandHandler {
       return
     }
 
-    // Check if the command is in the agent's available commands
-    const available = this.orchestrator.getAvailableCommands(task.id)
+    const active = this.orchestrator.getActiveSession(session.id)
+    if (!active) {
+      await this.larkClient.replyText(
+        message.messageId,
+        `Unknown command: /${parsed.command}`,
+      )
+      return
+    }
+
+    const available = this.orchestrator.getAvailableCommands(session.id)
     const commandText = `/${parsed.command}${parsed.args ? ` ${parsed.args}` : ""}`
 
     if (available.includes(parsed.command)) {
-      // Forward as a prompt to the agent
-      if (task.status === "waiting") {
-        await this.orchestrator.continueTask(task.id, commandText)
-      } else if (task.status === "running") {
-        await this.larkClient.replyText(
+      if (session.status === "idle") {
+        await this.orchestrator.runInSession(
+          session.id,
+          commandText,
           message.messageId,
-          "Agent is currently working. Please wait for it to finish.",
         )
-      } else {
+      } else if (session.status === "running") {
         await this.larkClient.replyText(
           message.messageId,
-          `Cannot send command in ${task.status} state.`,
+          "Agent is currently working. Please wait.",
         )
       }
     } else {

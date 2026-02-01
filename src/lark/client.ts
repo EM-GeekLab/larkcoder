@@ -117,6 +117,46 @@ export class LarkClient {
     }
   }
 
+  async replyPost(
+    messageId: string,
+    post: Record<string, unknown>,
+  ): Promise<string | undefined> {
+    try {
+      this.logger.withMetadata({ messageId }).debug("Replying post")
+      const resp = await this.sdk.im.message.reply({
+        path: { message_id: messageId },
+        data: {
+          content: JSON.stringify(post),
+          msg_type: "post",
+        },
+      })
+      this.logger
+        .withMetadata({ messageId, replyMessageId: resp.data?.message_id })
+        .debug("Reply post sent")
+      return resp.data?.message_id
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to reply post")
+      return undefined
+    }
+  }
+
+  async editMessage(
+    messageId: string,
+    msgType: "text" | "post",
+    content: string,
+  ): Promise<void> {
+    try {
+      this.logger.withMetadata({ messageId, msgType }).debug("Editing message")
+      await this.sdk.im.message.update({
+        path: { message_id: messageId },
+        data: { msg_type: msgType, content },
+      })
+      this.logger.withMetadata({ messageId }).debug("Message edited")
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to edit message")
+    }
+  }
+
   async updateCard(
     messageId: string,
     card: Record<string, unknown>,
@@ -130,6 +170,38 @@ export class LarkClient {
       this.logger.withMetadata({ messageId }).debug("Card updated")
     } catch (error: unknown) {
       this.logger.withError(error as Error).error("Failed to update card")
+    }
+  }
+
+  async recallMessage(messageId: string): Promise<void> {
+    try {
+      this.logger.withMetadata({ messageId }).debug("Recalling message")
+      await this.sdk.im.message.delete({
+        path: { message_id: messageId },
+      })
+      this.logger.withMetadata({ messageId }).debug("Message recalled")
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to recall message")
+    }
+  }
+
+  async sendPost(
+    chatId: string,
+    post: Record<string, unknown>,
+  ): Promise<string | undefined> {
+    try {
+      const resp = await this.sdk.im.message.create({
+        data: {
+          receive_id: chatId,
+          content: JSON.stringify(post),
+          msg_type: "post",
+        },
+        params: { receive_id_type: "chat_id" },
+      })
+      return resp.data?.message_id
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to send post")
+      return undefined
     }
   }
 

@@ -40,6 +40,23 @@ export class TaskStateError extends LarkCoderError {
   }
 }
 
+export class SessionNotFoundError extends LarkCoderError {
+  constructor(identifier: string) {
+    super(`Session not found: ${identifier}`, "SESSION_NOT_FOUND")
+    this.name = "SessionNotFoundError"
+  }
+}
+
+export class SessionStateError extends LarkCoderError {
+  constructor(sessionId: string, currentStatus: string, action: string) {
+    super(
+      `Cannot ${action} session ${sessionId} in status ${currentStatus}`,
+      "SESSION_STATE_ERROR",
+    )
+    this.name = "SessionStateError"
+  }
+}
+
 export class AgentError extends LarkCoderError {
   readonly exitCode: number | null
 

@@ -1,5 +1,5 @@
 import * as Lark from "@larksuiteoapi/node-sdk"
-import type { TaskService } from "../task/service.js"
+import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { CardAction, ParsedMessage } from "./types.js"
 
@@ -20,7 +20,7 @@ export class LarkEventHandler {
     this.cardActionHandler = handler
   }
 
-  createEventDispatcher(taskService: TaskService): Lark.EventDispatcher {
+  createEventDispatcher(sessionService: SessionService): Lark.EventDispatcher {
     return new Lark.EventDispatcher({}).register({
       "im.message.receive_v1": async (data: Record<string, unknown>) => {
         const header = data.header as Record<string, unknown> | undefined
@@ -29,11 +29,11 @@ export class LarkEventHandler {
 
         // Event dedup
         if (eventId) {
-          if (await taskService.isEventProcessed(eventId)) {
+          if (await sessionService.isEventProcessed(eventId)) {
             this.logger.info(`Duplicate event: ${eventId}`)
             return
           }
-          await taskService.markEventProcessed(eventId)
+          await sessionService.markEventProcessed(eventId)
         }
 
         const message = this.parseIMMessage(data)
@@ -64,7 +64,7 @@ export class LarkEventHandler {
           this.logger
             .withMetadata({
               action: action.action,
-              taskId: action.taskId,
+              sessionId: action.sessionId,
               openId: action.openId,
             })
             .info("Received card action")
@@ -152,7 +152,9 @@ export class LarkEventHandler {
       openMessageId: context?.open_message_id ?? "",
       openChatId: context?.open_chat_id ?? "",
       action: value.action,
-      taskId: value.task_id,
+      sessionId: value.session_id,
+      optionId: value.option_id,
+      modelId: value.model_id,
     }
   }
 }

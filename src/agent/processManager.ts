@@ -20,9 +20,9 @@ export class ProcessManager {
     this.logger = options.logger
   }
 
-  spawn(taskId: string, workingDir: string): AgentProcessInfo {
-    if (this.processes.has(taskId)) {
-      throw new Error(`Process already exists for task ${taskId}`)
+  spawn(sessionId: string, workingDir: string): AgentProcessInfo {
+    if (this.processes.has(sessionId)) {
+      throw new Error(`Process already exists for session ${sessionId}`)
     }
 
     this.logger.info(
@@ -35,21 +35,21 @@ export class ProcessManager {
       env: { ...process.env },
     })
 
-    this.processes.set(taskId, { process: child })
+    this.processes.set(sessionId, { process: child })
 
     child.stderr?.on("data", (data: Buffer) => {
-      this.logger.warn(`[agent:${taskId}:stderr] ${data.toString().trim()}`)
+      this.logger.warn(`[agent:${sessionId}:stderr] ${data.toString().trim()}`)
     })
 
     child.on("exit", (code, signal) => {
       this.logger.info(
-        `Agent process exited: task=${taskId} code=${code} signal=${signal}`,
+        `Agent process exited: session=${sessionId} code=${code} signal=${signal}`,
       )
-      this.processes.delete(taskId)
+      this.processes.delete(sessionId)
     })
 
     return {
-      taskId,
+      sessionId,
       process: child,
       pid: child.pid ?? 0,
       kill: () => {
@@ -58,28 +58,28 @@ export class ProcessManager {
     }
   }
 
-  kill(taskId: string): void {
-    const entry = this.processes.get(taskId)
+  kill(sessionId: string): void {
+    const entry = this.processes.get(sessionId)
     if (!entry) {
       return
     }
-    this.logger.info(`Killing agent process for task ${taskId}`)
+    this.logger.info(`Killing agent process for session ${sessionId}`)
     entry.process.kill("SIGTERM")
-    this.processes.delete(taskId)
+    this.processes.delete(sessionId)
   }
 
-  isAlive(taskId: string): boolean {
-    const entry = this.processes.get(taskId)
+  isAlive(sessionId: string): boolean {
+    const entry = this.processes.get(sessionId)
     return entry !== undefined && entry.process.exitCode === null
   }
 
-  getProcess(taskId: string): ChildProcess | undefined {
-    return this.processes.get(taskId)?.process
+  getProcess(sessionId: string): ChildProcess | undefined {
+    return this.processes.get(sessionId)?.process
   }
 
   killAll(): void {
-    for (const [taskId, entry] of this.processes) {
-      this.logger.info(`Killing agent process for task ${taskId}`)
+    for (const [sessionId, entry] of this.processes) {
+      this.logger.info(`Killing agent process for session ${sessionId}`)
       entry.process.kill("SIGTERM")
     }
     this.processes.clear()

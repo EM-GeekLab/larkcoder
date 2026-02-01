@@ -6,9 +6,9 @@ import { LarkClient } from "./lark/client.js"
 import { DocService } from "./lark/docService.js"
 import { LarkEventHandler } from "./lark/eventHandler.js"
 import { Orchestrator } from "./orchestrator/orchestrator.js"
-import { createDatabase } from "./task/db.js"
-import { TaskRepository } from "./task/repository.js"
-import { TaskService } from "./task/service.js"
+import { createDatabase } from "./session/db.js"
+import { SessionRepository } from "./session/repository.js"
+import { SessionService } from "./session/service.js"
 import { createLogger } from "./utils/logger.js"
 
 async function main(): Promise<void> {
@@ -25,10 +25,10 @@ async function main(): Promise<void> {
 
   // Initialize data layer
   const { db, close: closeDb } = await createDatabase(config.database.path)
-  const taskRepo = new TaskRepository(db)
-  const taskService = new TaskService(
-    taskRepo,
-    createLogger({ prefix: "task" }),
+  const sessionRepo = new SessionRepository(db)
+  const sessionService = new SessionService(
+    sessionRepo,
+    createLogger({ prefix: "session" }),
   )
 
   // Initialize process manager
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   // Initialize orchestrator
   const orchestrator = new Orchestrator(
     config,
-    taskService,
+    sessionService,
     processManager,
     larkClient,
     docService,
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
     await orchestrator.handleCardAction(action)
   })
 
-  const eventDispatcher = eventHandler.createEventDispatcher(taskService)
+  const eventDispatcher = eventHandler.createEventDispatcher(sessionService)
 
   // Start Lark WebSocket long connection
   await larkClient.startWS(eventDispatcher)

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8e8d7e43-f75f-44b3-a4e7-0851c92336e1",
+  "id": "9adc1238-fa46-4de2-bb93-c1a49d691b75",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "processed_events": {
@@ -28,8 +28,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "tasks": {
-      "name": "tasks",
+    "sessions": {
+      "name": "sessions",
       "columns": {
         "id": {
           "name": "id",
@@ -65,24 +65,17 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'pending'"
+          "default": "'idle'"
         },
-        "prompt": {
-          "name": "prompt",
+        "initial_prompt": {
+          "name": "initial_prompt",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "summary": {
-          "name": "summary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "session_id": {
-          "name": "session_id",
+        "acp_session_id": {
+          "name": "acp_session_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -109,12 +102,20 @@
           "notNull": false,
           "autoincrement": false
         },
-        "card_message_id": {
-          "name": "card_message_id",
+        "working_message_id": {
+          "name": "working_message_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "is_plan_mode": {
+          "name": "is_plan_mode",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -129,35 +130,21 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "error_message": {
-          "name": "error_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
-        "idx_tasks_chat_id": {
-          "name": "idx_tasks_chat_id",
+        "idx_sessions_chat_id": {
+          "name": "idx_sessions_chat_id",
           "columns": ["chat_id"],
           "isUnique": false
         },
-        "idx_tasks_thread_id": {
-          "name": "idx_tasks_thread_id",
+        "idx_sessions_thread_id": {
+          "name": "idx_sessions_thread_id",
           "columns": ["thread_id"],
           "isUnique": false
         },
-        "idx_tasks_status": {
-          "name": "idx_tasks_status",
+        "idx_sessions_status": {
+          "name": "idx_sessions_status",
           "columns": ["status"],
           "isUnique": false
         }
