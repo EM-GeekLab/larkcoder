@@ -60,7 +60,7 @@ export class CommandHandler {
   ): Promise<void> {
     switch (parsed.command) {
       case "help":
-        await this.larkClient.replyText(message.messageId, HELP_TEXT)
+        await this.larkClient.replyMarkdownCard(message.messageId, HELP_TEXT)
         break
 
       case "stop":
@@ -98,14 +98,17 @@ export class CommandHandler {
   private async handleStop(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         "No active session found.",
       )
       return
     }
     await this.orchestrator.stopSession(session.id)
-    await this.larkClient.replyText(message.messageId, "Session stopped.")
+    await this.larkClient.replyMarkdownCard(
+      message.messageId,
+      "Session stopped.",
+    )
   }
 
   private async handleNew(args: string, message: ParsedMessage): Promise<void> {
@@ -130,7 +133,7 @@ export class CommandHandler {
   private async handlePlan(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         "No active session found.",
       )
@@ -139,13 +142,16 @@ export class CommandHandler {
     const newMode = !session.isPlanMode
     await this.sessionService.setPlanMode(session.id, newMode)
     const label = newMode ? "Plan mode enabled" : "Plan mode disabled"
-    await this.larkClient.replyText(message.messageId, label)
+    await this.larkClient.replyMarkdownCard(message.messageId, label)
   }
 
   private async handleInfo(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyText(message.messageId, "No session found.")
+      await this.larkClient.replyMarkdownCard(
+        message.messageId,
+        "No session found.",
+      )
       return
     }
 
@@ -157,13 +163,13 @@ export class CommandHandler {
       `Created: ${session.createdAt}`,
     ]
 
-    await this.larkClient.replyText(message.messageId, lines.join("\n"))
+    await this.larkClient.replyMarkdownCard(message.messageId, lines.join("\n"))
   }
 
   private async handleModel(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         "No active session found.",
       )
@@ -178,7 +184,7 @@ export class CommandHandler {
   ): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         `Unknown command: /${parsed.command}`,
       )
@@ -187,7 +193,7 @@ export class CommandHandler {
 
     const active = this.orchestrator.getActiveSession(session.id)
     if (!active) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         `Unknown command: /${parsed.command}`,
       )
@@ -205,13 +211,13 @@ export class CommandHandler {
           message.messageId,
         )
       } else if (session.status === "running") {
-        await this.larkClient.replyText(
+        await this.larkClient.replyMarkdownCard(
           message.messageId,
           "Agent is currently working. Please wait.",
         )
       }
     } else {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         `Unknown command: /${parsed.command}`,
       )

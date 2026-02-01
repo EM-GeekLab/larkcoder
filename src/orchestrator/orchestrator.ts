@@ -12,24 +12,38 @@ import { createAcpClient } from "../agent/acpClient.js"
 import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
-  buildErrorPost,
+  STREAMING_ELEMENT_ID,
   buildModelSelectCard,
   buildPermissionCard,
-  buildResultPost,
   buildSelectedCard,
   buildSessionDeleteCard,
   buildSessionListCard,
-  buildWorkingPost,
+  buildStreamingCard,
+  buildStreamingCloseSettings,
 } from "../lark/cardTemplates.js"
 import { createDocTools } from "../lark/docTools.js"
 import { extractErrorMessage } from "../utils/errors.js"
 
 const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
+const STREAM_FLUSH_INTERVAL_MS = 150
+const STREAM_AUTO_CLOSE_MS = 10 * 60 * 1000
+const STREAM_MAX_CONTENT_LENGTH = 100_000
 
 type PermissionResolver = {
   resolve: (resp: acp.RequestPermissionResponse) => void
   cardMessageId: string
   timer: ReturnType<typeof setTimeout>
+}
+
+type StreamingCard = {
+  cardId: string
+  messageId: string
+  sequence: number
+  accumulatedText: string
+  lastFlushedText: string
+  flushTimer: ReturnType<typeof setTimeout> | null
+  streamingOpen: boolean
+  streamingOpenedAt: number
 }
 
 type ActiveSession = {
@@ -38,8 +52,8 @@ type ActiveSession = {
   acpSessionId: string
   availableCommands: string[]
   currentMode: string
-  messageChunks: string[]
-  permissionResolver?: PermissionResolver
+  streamingCard?: StreamingCard
+  permissionResolvers: Map<string, PermissionResolver>
 }
 
 export class Orchestrator {
@@ -77,7 +91,7 @@ export class Orchestrator {
 
     if (session) {
       if (session.status === "running") {
-        await this.larkClient.replyText(
+        await this.larkClient.replyMarkdownCard(
           message.messageId,
           "Agent is currently working. Please wait.",
         )
@@ -190,7 +204,7 @@ export class Orchestrator {
   async handleListSessions(message: ParsedMessage): Promise<void> {
     const sessions = await this.sessionService.listSessions(message.chatId, 10)
     if (sessions.length === 0) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         "No sessions found in this chat.",
       )
@@ -204,7 +218,7 @@ export class Orchestrator {
   async handleDeleteSessions(message: ParsedMessage): Promise<void> {
     const sessions = await this.sessionService.listSessions(message.chatId, 10)
     if (sessions.length === 0) {
-      await this.larkClient.replyText(
+      await this.larkClient.replyMarkdownCard(
         message.messageId,
         "No sessions found in this chat.",
       )
@@ -245,23 +259,12 @@ export class Orchestrator {
       // Set running
       await this.sessionService.setRunning(sessionId)
 
-      // Send "working..." placeholder as post (so we can edit it later)
-      const planPrefix = session.isPlanMode ? "Plan mode | " : ""
-      const workingMsgId = await this.larkClient.replyPost(
-        replyToMessageId,
-        buildWorkingPost(`${planPrefix}Processing...`),
-      )
-      if (workingMsgId) {
-        await this.sessionService.setWorkingMessageId(sessionId, workingMsgId)
-      }
-
-      // Clear message chunks
-      const active = this.activeSessions.get(sessionId)
-      if (active) {
-        active.messageChunks = []
-      }
+      // Create streaming card
+      await this.createStreamingCard(sessionId, replyToMessageId, "")
 
       // Send prompt
+      const active = this.activeSessions.get(sessionId)
+
       this.logger
         .withMetadata({ sessionId, promptLength: prompt.length })
         .debug("Sending prompt to agent")
@@ -275,13 +278,13 @@ export class Orchestrator {
         .withMetadata({ sessionId, stopReason: response.stopReason })
         .info("Prompt completed")
 
-      // Update working message to result
-      const resultText = active!.messageChunks.join("")
-      await this.finalizeWorkingMessage(
-        sessionId,
-        buildResultPost(resultText),
-        replyToMessageId,
-      )
+      // Close streaming card with summary
+      const summaryText = active!.streamingCard?.accumulatedText ?? ""
+      const summary =
+        summaryText.length > 100
+          ? `${summaryText.slice(0, 100)}...`
+          : summaryText || "(no output)"
+      await this.closeStreamingCard(sessionId, summary)
 
       // Set idle
       await this.sessionService.setIdle(sessionId)
@@ -291,12 +294,19 @@ export class Orchestrator {
         .withError(error as Error)
         .error(`Prompt failed for session ${sessionId}`)
 
-      // Update working message to error
-      await this.finalizeWorkingMessage(
-        sessionId,
-        buildErrorPost(msg),
-        replyToMessageId,
-      )
+      // Append error to streaming card and close
+      const active = this.activeSessions.get(sessionId)
+      if (active?.streamingCard) {
+        active.streamingCard.accumulatedText += `\n\n**Error:** ${msg}`
+        await this.forceFlush(sessionId)
+        await this.closeStreamingCard(sessionId, `Error: ${msg}`)
+      } else {
+        // No streaming card — fallback to markdown card
+        await this.larkClient.replyMarkdownCard(
+          replyToMessageId,
+          `**Error:** ${msg}`,
+        )
+      }
 
       // Set idle
       try {
@@ -310,6 +320,13 @@ export class Orchestrator {
   async stopSession(sessionId: string): Promise<void> {
     const active = this.activeSessions.get(sessionId)
     if (active) {
+      // Close streaming card if open
+      if (active.streamingCard) {
+        active.streamingCard.accumulatedText += "\n\n*Stopped.*"
+        await this.forceFlush(sessionId)
+        await this.closeStreamingCard(sessionId, "Stopped.")
+      }
+
       try {
         await active.client.cancel({ sessionId: active.acpSessionId })
       } catch {
@@ -318,9 +335,6 @@ export class Orchestrator {
     }
     this.processManager.kill(sessionId)
     this.cleanupSession(sessionId)
-
-    await this.updateWorkingMessage(sessionId, buildWorkingPost("Stopped."))
-    await this.sessionService.setWorkingMessageId(sessionId, null)
 
     try {
       await this.sessionService.setIdle(sessionId)
@@ -412,7 +426,7 @@ export class Orchestrator {
       acpSessionId,
       availableCommands: [],
       currentMode: "",
-      messageChunks: [],
+      permissionResolvers: new Map(),
     })
   }
 
@@ -420,11 +434,8 @@ export class Orchestrator {
     sessionId: string,
     params: acp.RequestPermissionRequest,
   ): Promise<acp.RequestPermissionResponse> {
-    // Update working message to waiting state
-    await this.updateWorkingMessage(
-      sessionId,
-      buildWorkingPost("Waiting for permission..."),
-    )
+    // Flush streaming card so latest output is visible
+    await this.forceFlush(sessionId)
 
     const session = await this.sessionService.getSession(sessionId)
 
@@ -441,25 +452,24 @@ export class Orchestrator {
     })
 
     const cardMsgId = await this.larkClient.sendCard(session.chatId, card)
+    const resolverKey = cardMsgId ?? ""
 
     // Wait for user selection with timeout
     return new Promise<acp.RequestPermissionResponse>((resolve) => {
       const timer = setTimeout(() => {
         // Timeout — cancel
         const active = this.activeSessions.get(sessionId)
-        if (active?.permissionResolver) {
-          active.permissionResolver = undefined
-        }
+        active?.permissionResolvers.delete(resolverKey)
         resolve({ outcome: { outcome: "cancelled" } })
       }, PERMISSION_TIMEOUT_MS)
 
       const active = this.activeSessions.get(sessionId)
       if (active) {
-        active.permissionResolver = {
+        active.permissionResolvers.set(resolverKey, {
           resolve,
-          cardMessageId: cardMsgId ?? "",
+          cardMessageId: resolverKey,
           timer,
-        }
+        })
       } else {
         clearTimeout(timer)
         resolve({ outcome: { outcome: "cancelled" } })
@@ -473,13 +483,16 @@ export class Orchestrator {
     cardMessageId: string,
   ): Promise<void> {
     const active = this.activeSessions.get(sessionId)
-    if (!active?.permissionResolver) {
+    if (!active) {
+      return
+    }
+    const resolver = active.permissionResolvers.get(cardMessageId)
+    if (!resolver) {
       return
     }
 
-    const { resolve, timer } = active.permissionResolver
-    clearTimeout(timer)
-    active.permissionResolver = undefined
+    clearTimeout(resolver.timer)
+    active.permissionResolvers.delete(cardMessageId)
 
     // Update card to show selection
     await this.larkClient.updateCard(
@@ -487,16 +500,8 @@ export class Orchestrator {
       buildSelectedCard(`Selected: ${optionId}`),
     )
 
-    // Update working message back to processing
-    const session = await this.sessionService.getSession(sessionId)
-    const planPrefix = session.isPlanMode ? "Plan mode | " : ""
-    await this.updateWorkingMessage(
-      sessionId,
-      buildWorkingPost(`${planPrefix}Processing...`),
-    )
-
     // Resolve the permission promise
-    resolve({
+    resolver.resolve({
       outcome: { outcome: "selected", optionId },
     })
   }
@@ -516,7 +521,10 @@ export class Orchestrator {
         buildSelectedCard(`Resumed session: ${label}`),
       )
 
-      await this.larkClient.sendText(chatId, `Switched to session: ${label}`)
+      await this.larkClient.sendMarkdownCard(
+        chatId,
+        `Switched to session: ${label}`,
+      )
     } catch {
       await this.larkClient.updateCard(
         cardMessageId,
@@ -610,8 +618,9 @@ export class Orchestrator {
           | Record<string, unknown>
           | undefined
         const text = content?.text as string | undefined
-        if (text) {
-          active.messageChunks.push(text)
+        if (text && active.streamingCard) {
+          active.streamingCard.accumulatedText += text
+          this.scheduleFlush(sessionId)
         }
         break
       }
@@ -643,46 +652,169 @@ export class Orchestrator {
     }
   }
 
-  private async updateWorkingMessage(
+  private async createStreamingCard(
     sessionId: string,
-    post: Record<string, unknown>,
+    replyToMessageId: string,
+    initialContent: string,
   ): Promise<void> {
-    try {
-      const session = await this.sessionService.getSession(sessionId)
-      if (session.workingMessageId) {
-        await this.larkClient.editMessage(
-          session.workingMessageId,
-          "post",
-          JSON.stringify(post),
-        )
-      }
-    } catch {
-      // Ignore update failures
+    const active = this.activeSessions.get(sessionId)
+    if (!active) {
+      return
+    }
+
+    const cardId = await this.larkClient.createCardEntity(
+      buildStreamingCard(initialContent),
+    )
+    if (!cardId) {
+      this.logger.error("Failed to create streaming card entity")
+      return
+    }
+
+    const messageId = await this.larkClient.replyCardEntity(
+      replyToMessageId,
+      cardId,
+    )
+    if (!messageId) {
+      this.logger.error("Failed to send streaming card")
+      return
+    }
+
+    await this.sessionService.setWorkingMessageId(sessionId, messageId)
+
+    active.streamingCard = {
+      cardId,
+      messageId,
+      sequence: 0,
+      accumulatedText: initialContent,
+      lastFlushedText: initialContent,
+      flushTimer: null,
+      streamingOpen: true,
+      streamingOpenedAt: Date.now(),
     }
   }
 
-  private async finalizeWorkingMessage(
-    sessionId: string,
-    post: Record<string, unknown>,
-    fallbackReplyMessageId: string,
-  ): Promise<void> {
-    const session = await this.sessionService.getSession(sessionId)
-    if (session.workingMessageId) {
-      await this.larkClient.editMessage(
-        session.workingMessageId,
-        "post",
-        JSON.stringify(post),
-      )
-      await this.sessionService.setWorkingMessageId(sessionId, null)
-    } else {
-      await this.larkClient.replyPost(fallbackReplyMessageId, post)
+  private scheduleFlush(sessionId: string): void {
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card || card.flushTimer) {
+      return
     }
+
+    if (card.accumulatedText === card.lastFlushedText) {
+      return
+    }
+
+    card.flushTimer = setTimeout(() => {
+      card.flushTimer = null
+      void this.flushStreamingCard(sessionId)
+    }, STREAM_FLUSH_INTERVAL_MS)
+  }
+
+  private async flushStreamingCard(sessionId: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card || card.accumulatedText === card.lastFlushedText) {
+      return
+    }
+
+    await this.ensureStreamingOpen(sessionId)
+
+    const content = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
+    const seq = this.nextSequence(sessionId)
+
+    await this.larkClient.streamCardText(
+      card.cardId,
+      STREAMING_ELEMENT_ID,
+      content,
+      seq,
+    )
+
+    card.lastFlushedText = card.accumulatedText
+  }
+
+  private async forceFlush(sessionId: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card) {
+      return
+    }
+
+    if (card.flushTimer) {
+      clearTimeout(card.flushTimer)
+      card.flushTimer = null
+    }
+
+    await this.flushStreamingCard(sessionId)
+  }
+
+  private async closeStreamingCard(
+    sessionId: string,
+    summaryText: string,
+  ): Promise<void> {
+    await this.forceFlush(sessionId)
+
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card) {
+      return
+    }
+
+    const closeSettings = buildStreamingCloseSettings(summaryText)
+    const seq = this.nextSequence(sessionId)
+    await this.larkClient.updateCardSettings(card.cardId, closeSettings, seq)
+
+    await this.sessionService.setWorkingMessageId(sessionId, null)
+    active.streamingCard = undefined
+  }
+
+  private async ensureStreamingOpen(sessionId: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card) {
+      return
+    }
+
+    const elapsed = Date.now() - card.streamingOpenedAt
+    if (card.streamingOpen && elapsed < STREAM_AUTO_CLOSE_MS) {
+      return
+    }
+
+    // Re-open streaming mode
+    const seq = this.nextSequence(sessionId)
+    await this.larkClient.updateCardSettings(
+      card.cardId,
+      {
+        config: {
+          streaming_mode: true,
+          summary: { content: "[生成中...]" },
+        },
+      },
+      seq,
+    )
+
+    card.streamingOpen = true
+    card.streamingOpenedAt = Date.now()
+  }
+
+  private nextSequence(sessionId: string): number {
+    const active = this.activeSessions.get(sessionId)
+    const card = active?.streamingCard
+    if (!card) {
+      return 0
+    }
+    card.sequence++
+    return card.sequence
   }
 
   private cleanupSession(sessionId: string): void {
     const active = this.activeSessions.get(sessionId)
-    if (active?.permissionResolver) {
-      clearTimeout(active.permissionResolver.timer)
+    if (active) {
+      for (const resolver of active.permissionResolvers.values()) {
+        clearTimeout(resolver.timer)
+      }
+      if (active.streamingCard?.flushTimer) {
+        clearTimeout(active.streamingCard.flushTimer)
+      }
     }
     this.activeSessions.delete(sessionId)
   }
@@ -690,8 +822,11 @@ export class Orchestrator {
   shutdown(): void {
     this.processManager.killAll()
     for (const active of this.activeSessions.values()) {
-      if (active.permissionResolver) {
-        clearTimeout(active.permissionResolver.timer)
+      for (const resolver of active.permissionResolvers.values()) {
+        clearTimeout(resolver.timer)
+      }
+      if (active.streamingCard?.flushTimer) {
+        clearTimeout(active.streamingCard.flushTimer)
       }
     }
     this.activeSessions.clear()

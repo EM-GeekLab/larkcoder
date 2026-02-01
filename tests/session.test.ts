@@ -6,10 +6,7 @@ import type {
   SessionStatus,
 } from "../src/session/types.js"
 import { SessionService } from "../src/session/service.js"
-import {
-  SessionNotFoundError,
-  SessionStateError,
-} from "../src/utils/errors.js"
+import { SessionNotFoundError, SessionStateError } from "../src/utils/errors.js"
 import { createLogger } from "../src/utils/logger.js"
 
 class MockSessionRepository implements Pick<

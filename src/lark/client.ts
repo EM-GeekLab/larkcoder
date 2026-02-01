@@ -1,6 +1,7 @@
 import * as lark from "@larksuiteoapi/node-sdk"
 import type { LarkConfig } from "./types.js"
 import { type Logger, createLarkLogger } from "../utils/logger.js"
+import { buildMarkdownCard } from "./cardTemplates.js"
 
 export class LarkClient {
   readonly sdk: lark.Client
@@ -203,6 +204,97 @@ export class LarkClient {
       this.logger.withError(error as Error).error("Failed to send post")
       return undefined
     }
+  }
+
+  async createCardEntity(
+    cardJson: Record<string, unknown>,
+  ): Promise<string | undefined> {
+    try {
+      this.logger.debug("Creating card entity")
+      const resp = await this.sdk.cardkit.v1.card.create({
+        data: { type: "card_json", data: JSON.stringify(cardJson) },
+      })
+      const cardId = resp.data?.card_id
+      this.logger.withMetadata({ cardId }).debug("Card entity created")
+      return cardId
+    } catch (error: unknown) {
+      this.logger
+        .withError(error as Error)
+        .error("Failed to create card entity")
+      return undefined
+    }
+  }
+
+  async replyCardEntity(
+    messageId: string,
+    cardId: string,
+  ): Promise<string | undefined> {
+    try {
+      this.logger
+        .withMetadata({ messageId, cardId })
+        .debug("Replying with card entity")
+      const resp = await this.sdk.im.message.reply({
+        path: { message_id: messageId },
+        data: {
+          content: JSON.stringify({ type: "card", data: { card_id: cardId } }),
+          msg_type: "interactive",
+        },
+      })
+      this.logger
+        .withMetadata({ messageId, replyMessageId: resp.data?.message_id })
+        .debug("Card entity reply sent")
+      return resp.data?.message_id
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to reply card entity")
+      return undefined
+    }
+  }
+
+  async streamCardText(
+    cardId: string,
+    elementId: string,
+    content: string,
+    sequence: number,
+  ): Promise<void> {
+    try {
+      await this.sdk.cardkit.v1.cardElement.content({
+        path: { card_id: cardId, element_id: elementId },
+        data: { content, sequence },
+      })
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to stream card text")
+    }
+  }
+
+  async updateCardSettings(
+    cardId: string,
+    settings: Record<string, unknown>,
+    sequence: number,
+  ): Promise<void> {
+    try {
+      await this.sdk.cardkit.v1.card.settings({
+        path: { card_id: cardId },
+        data: { settings: JSON.stringify(settings), sequence },
+      })
+    } catch (error: unknown) {
+      this.logger
+        .withError(error as Error)
+        .error("Failed to update card settings")
+    }
+  }
+
+  async replyMarkdownCard(
+    messageId: string,
+    markdown: string,
+  ): Promise<string | undefined> {
+    return this.replyCard(messageId, buildMarkdownCard(markdown))
+  }
+
+  async sendMarkdownCard(
+    chatId: string,
+    markdown: string,
+  ): Promise<string | undefined> {
+    return this.sendCard(chatId, buildMarkdownCard(markdown))
   }
 
   async fetchDocContent(docToken: string): Promise<string | null> {

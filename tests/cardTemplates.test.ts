@@ -1,14 +1,15 @@
 import { describe, expect, it } from "bun:test"
 import type { Session } from "../src/session/types.js"
 import {
-  buildErrorPost,
+  STREAMING_ELEMENT_ID,
+  buildMarkdownCard,
   buildModelSelectCard,
   buildPermissionCard,
-  buildResultPost,
   buildSelectedCard,
   buildSessionDeleteCard,
   buildSessionListCard,
-  buildWorkingPost,
+  buildStreamingCard,
+  buildStreamingCloseSettings,
 } from "../src/lark/cardTemplates.js"
 
 function makeSession(overrides?: Partial<Session>): Session {
@@ -26,6 +27,79 @@ function makeSession(overrides?: Partial<Session>): Session {
     ...overrides,
   }
 }
+
+describe("buildMarkdownCard", () => {
+  it("builds a card with markdown content and no title", () => {
+    const card = buildMarkdownCard("Hello **world**")
+
+    expect(card.config).toEqual({ wide_screen_mode: true })
+    const elements = card.elements as Record<string, unknown>[]
+    expect(elements).toHaveLength(1)
+    expect(elements[0]!.tag).toBe("markdown")
+    expect(elements[0]!.content).toBe("Hello **world**")
+  })
+
+  it("handles empty content", () => {
+    const card = buildMarkdownCard("")
+
+    const elements = card.elements as Record<string, unknown>[]
+    expect(elements).toHaveLength(1)
+    expect(elements[0]!.content).toBe("")
+  })
+})
+
+describe("buildStreamingCard", () => {
+  it("builds a schema 2.0 card with streaming_mode enabled", () => {
+    const card = buildStreamingCard()
+
+    expect(card.schema).toBe("2.0")
+    const config = card.config as Record<string, unknown>
+    expect(config.streaming_mode).toBe(true)
+    expect(config.update_multi).toBe(true)
+  })
+
+  it("includes streaming_config with fast print strategy", () => {
+    const card = buildStreamingCard()
+
+    const config = card.config as Record<string, unknown>
+    const streamingConfig = config.streaming_config as Record<string, unknown>
+    expect(streamingConfig.print_strategy).toBe("fast")
+  })
+
+  it("contains a markdown element with correct element_id", () => {
+    const card = buildStreamingCard("initial text")
+
+    const body = card.body as { elements: Record<string, unknown>[] }
+    expect(body.elements).toHaveLength(1)
+    expect(body.elements[0]!.tag).toBe("markdown")
+    expect(body.elements[0]!.content).toBe("initial text")
+    expect(body.elements[0]!.element_id).toBe(STREAMING_ELEMENT_ID)
+  })
+
+  it("defaults to empty content when no initial content provided", () => {
+    const card = buildStreamingCard()
+
+    const body = card.body as { elements: Record<string, unknown>[] }
+    expect(body.elements[0]!.content).toBe("")
+  })
+})
+
+describe("buildStreamingCloseSettings", () => {
+  it("sets streaming_mode to false", () => {
+    const settings = buildStreamingCloseSettings("Summary text")
+
+    const config = settings.config as Record<string, unknown>
+    expect(config.streaming_mode).toBe(false)
+  })
+
+  it("includes summary content", () => {
+    const settings = buildStreamingCloseSettings("Done!")
+
+    const config = settings.config as Record<string, unknown>
+    const summary = config.summary as { content: string }
+    expect(summary.content).toBe("Done!")
+  })
+})
 
 describe("buildPermissionCard", () => {
   it("builds a permission card with options", () => {
@@ -150,65 +224,5 @@ describe("buildSelectedCard", () => {
     expect(elements).toHaveLength(1)
     expect(elements[0]!.tag).toBe("markdown")
     expect(elements[0]!.content).toBe("Selected: allow")
-  })
-})
-
-describe("buildWorkingPost", () => {
-  it("builds a simple post with text", () => {
-    const post = buildWorkingPost("Processing...")
-
-    const zhCn = post.zh_cn as { title: string; content: unknown[][] }
-    expect(zhCn.title).toBe("")
-    expect(zhCn.content).toHaveLength(1)
-
-    const line = zhCn.content[0] as Record<string, unknown>[]
-    expect(line[0]!.text).toBe("Processing...")
-  })
-})
-
-describe("buildResultPost", () => {
-  it("builds a result post with text", () => {
-    const post = buildResultPost("task completed")
-
-    const zhCn = post.zh_cn as { title: string; content: unknown[][] }
-    expect(zhCn.title).toBe("")
-    expect(zhCn.content).toHaveLength(1)
-
-    const line = zhCn.content[0] as Record<string, unknown>[]
-    expect(line[0]!.text).toBe("task completed")
-  })
-
-  it("shows (no output) for empty text", () => {
-    const post = buildResultPost("")
-
-    const zhCn = post.zh_cn as { title: string; content: unknown[][] }
-    expect(zhCn.content).toHaveLength(1)
-    const line = zhCn.content[0] as Record<string, unknown>[]
-    expect(line[0]!.text).toBe("(no output)")
-  })
-
-  it("truncates long text", () => {
-    const longText = "x".repeat(5000)
-    const post = buildResultPost(longText)
-
-    const zhCn = post.zh_cn as { title: string; content: unknown[][] }
-    const line = zhCn.content[0] as Record<string, unknown>[]
-    const text = line[0]!.text as string
-    expect(text.length).toBeLessThan(5000)
-    expect(text).toContain("...")
-  })
-})
-
-describe("buildErrorPost", () => {
-  it("builds an error post", () => {
-    const post = buildErrorPost("connection refused")
-
-    const zhCn = post.zh_cn as { title: string; content: unknown[][] }
-    expect(zhCn.content).toHaveLength(1)
-
-    const line = zhCn.content[0] as Record<string, unknown>[]
-    expect(line[0]!.text).toBe("Error: ")
-    expect(line[0]!.style).toEqual(["bold"])
-    expect(line[1]!.text).toBe("connection refused")
   })
 })

@@ -7,10 +7,51 @@ function truncate(text: string, maxLen: number): string {
   return `${text.slice(0, maxLen)}...`
 }
 
-type PostElement = Record<string, unknown>
+export function buildMarkdownCard(content: string): Record<string, unknown> {
+  return {
+    config: { wide_screen_mode: true },
+    elements: [{ tag: "markdown", content }],
+  }
+}
 
-export function buildWorkingPost(text: string): Record<string, unknown> {
-  return { zh_cn: { title: "", content: [[{ tag: "text", text }]] } }
+export const STREAMING_ELEMENT_ID = "md_stream"
+
+export function buildStreamingCard(
+  initialContent?: string,
+): Record<string, unknown> {
+  return {
+    schema: "2.0",
+    config: {
+      streaming_mode: true,
+      update_multi: true,
+      summary: { content: "[生成中...]" },
+      streaming_config: {
+        print_frequency_ms: { default: 50 },
+        print_step: { default: 2 },
+        print_strategy: "fast",
+      },
+    },
+    body: {
+      elements: [
+        {
+          tag: "markdown",
+          content: initialContent ?? "",
+          element_id: STREAMING_ELEMENT_ID,
+        },
+      ],
+    },
+  }
+}
+
+export function buildStreamingCloseSettings(
+  summaryContent: string,
+): Record<string, unknown> {
+  return {
+    config: {
+      streaming_mode: false,
+      summary: { content: summaryContent },
+    },
+  }
 }
 
 type PermissionCardData = {
@@ -145,29 +186,4 @@ export function buildSelectedCard(text: string): Record<string, unknown> {
     config: { wide_screen_mode: true },
     elements: [{ tag: "markdown", content: text }],
   }
-}
-
-export function buildResultPost(text: string): Record<string, unknown> {
-  const content: PostElement[][] = []
-
-  if (text) {
-    content.push([{ tag: "text", text: truncate(text, 4000) }])
-  }
-
-  if (content.length === 0) {
-    content.push([{ tag: "text", text: "(no output)" }])
-  }
-
-  return { zh_cn: { title: "", content } }
-}
-
-export function buildErrorPost(error: string): Record<string, unknown> {
-  const content: PostElement[][] = [
-    [
-      { tag: "text", text: "Error: ", style: ["bold"] },
-      { tag: "text", text: truncate(error, 2000) },
-    ],
-  ]
-
-  return { zh_cn: { title: "", content } }
 }
