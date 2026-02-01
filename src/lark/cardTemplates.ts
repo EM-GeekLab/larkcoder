@@ -9,8 +9,14 @@ function truncate(text: string, maxLen: number): string {
 
 export function buildMarkdownCard(content: string): Record<string, unknown> {
   return {
-    config: { wide_screen_mode: true },
-    elements: [{ tag: "markdown", content }],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [{ tag: "markdown", content }],
+    },
   }
 }
 
@@ -64,6 +70,7 @@ export function buildStreamingCloseSettings(summaryContent: string): Record<stri
   return {
     config: {
       streaming_mode: false,
+      update_multi: true,
       summary: { content: summaryContent },
     },
   }
@@ -76,34 +83,63 @@ type PermissionCardData = {
 }
 
 export function buildPermissionCard(data: PermissionCardData): Record<string, unknown> {
-  const actions = data.options.map((opt, idx) => ({
-    tag: "button",
-    text: { tag: "plain_text", content: `${idx + 1}` },
-    type: idx === 0 ? "primary" : "default",
-    value: {
-      action: "permission_select",
-      session_id: data.sessionId,
-      option_id: opt.optionId,
-    },
-  }))
-
-  return {
-    config: { wide_screen_mode: true },
+  const interactiveContainers = data.options.map((opt) => ({
+    tag: "interactive_container",
+    width: "fill",
+    height: "auto",
+    horizontal_align: "left",
+    background_style: "default",
+    has_border: true,
+    border_color: "grey",
+    corner_radius: "8px",
+    padding: "4px 12px 4px 12px",
+    behaviors: [
+      {
+        type: "callback",
+        value: {
+          action: "permission_select",
+          session_id: data.sessionId,
+          option_id: opt.optionId,
+        },
+      },
+    ],
     elements: [
       {
         tag: "markdown",
-        content: data.toolDescription,
+        content: opt.label,
       },
-      ...(data.options.length > 1
-        ? [
-            {
-              tag: "markdown",
-              content: data.options.map((opt, idx) => `**${idx + 1}.** ${opt.label}`).join("\n"),
-            },
-          ]
-        : []),
-      { tag: "action", actions },
     ],
+  }))
+
+  return {
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [
+        {
+          tag: "markdown",
+          content: data.toolDescription,
+        },
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "top",
+              vertical_spacing: "8px",
+              elements: interactiveContainers,
+            },
+          ],
+        },
+      ],
+    },
   }
 }
 
@@ -112,54 +148,186 @@ type SessionListCardData = {
 }
 
 export function buildSessionListCard(data: SessionListCardData): Record<string, unknown> {
-  const lines = data.sessions.map((s, idx) => {
-    const prompt = truncate(s.initialPrompt, 40)
+  const interactiveContainers = data.sessions.map((s) => {
+    const prompt = truncate(s.initialPrompt, 60)
     const time = s.updatedAt.replace("T", " ").slice(0, 19)
-    return `**${idx + 1}.** ${prompt}  \`${time}\``
+    return {
+      tag: "interactive_container",
+      width: "fill",
+      height: "auto",
+      horizontal_align: "left",
+      background_style: "default",
+      has_border: true,
+      border_color: "grey",
+      corner_radius: "8px",
+      padding: "4px 12px 4px 12px",
+      behaviors: [
+        {
+          type: "callback",
+          value: {
+            action: "session_select",
+            session_id: s.id,
+          },
+        },
+      ],
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "center",
+              elements: [
+                {
+                  tag: "markdown",
+                  content: prompt,
+                  icon: {
+                    tag: "standard_icon",
+                    token: "chat-history_outlined",
+                  },
+                },
+              ],
+            },
+            {
+              tag: "column",
+              width: "auto",
+              weight: 1,
+              vertical_align: "center",
+              elements: [
+                {
+                  tag: "markdown",
+                  content: `<font color='grey'>${time}</font>`,
+                  text_size: "notation",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
   })
 
-  const actions = data.sessions.map((s, idx) => ({
-    tag: "button",
-    text: { tag: "plain_text", content: `${idx + 1}` },
-    type: "default",
-    value: {
-      action: "session_select",
-      session_id: s.id,
-    },
-  }))
-
   return {
-    config: { wide_screen_mode: true },
-    elements: [
-      { tag: "markdown", content: lines.join("\n") },
-      { tag: "action", actions },
-    ],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "top",
+              vertical_spacing: "8px",
+              elements: interactiveContainers,
+            },
+          ],
+        },
+      ],
+    },
   }
 }
 
 export function buildSessionDeleteCard(data: SessionListCardData): Record<string, unknown> {
-  const lines = data.sessions.map((s, idx) => {
-    const prompt = truncate(s.initialPrompt, 40)
+  const interactiveContainers = data.sessions.map((s) => {
+    const prompt = truncate(s.initialPrompt, 60)
     const time = s.updatedAt.replace("T", " ").slice(0, 19)
-    return `**${idx + 1}.** ${prompt}  \`${time}\``
+    return {
+      tag: "interactive_container",
+      width: "fill",
+      height: "auto",
+      horizontal_align: "left",
+      background_style: "default",
+      has_border: true,
+      border_color: "grey",
+      corner_radius: "8px",
+      padding: "4px 12px 4px 12px",
+      behaviors: [
+        {
+          type: "callback",
+          value: {
+            action: "session_delete",
+            session_id: s.id,
+          },
+        },
+      ],
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "center",
+              elements: [
+                {
+                  tag: "markdown",
+                  content: prompt,
+                  icon: {
+                    tag: "standard_icon",
+                    token: "chat-history_outlined",
+                  },
+                },
+              ],
+            },
+            {
+              tag: "column",
+              width: "auto",
+              weight: 1,
+              vertical_align: "center",
+              elements: [
+                {
+                  tag: "markdown",
+                  content: `<font color='grey'>${time}</font>`,
+                  text_size: "notation",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
   })
 
-  const actions = data.sessions.map((s, idx) => ({
-    tag: "button",
-    text: { tag: "plain_text", content: `${idx + 1}` },
-    type: "danger",
-    value: {
-      action: "session_delete",
-      session_id: s.id,
-    },
-  }))
-
   return {
-    config: { wide_screen_mode: true },
-    elements: [
-      { tag: "markdown", content: lines.join("\n") },
-      { tag: "action", actions },
-    ],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "top",
+              vertical_spacing: "8px",
+              elements: interactiveContainers,
+            },
+          ],
+        },
+      ],
+    },
   }
 }
 
@@ -169,27 +337,72 @@ type ModelSelectCardData = {
 }
 
 export function buildModelSelectCard(data: ModelSelectCardData): Record<string, unknown> {
-  const actions = data.models.map((m) => ({
-    tag: "button",
-    text: { tag: "plain_text", content: m.label },
-    type: "default",
-    value: {
-      action: "model_select",
-      session_id: data.sessionId,
-      model_id: m.modelId,
-    },
+  const interactiveContainers = data.models.map((m) => ({
+    tag: "interactive_container",
+    width: "fill",
+    height: "auto",
+    horizontal_align: "left",
+    background_style: "default",
+    has_border: true,
+    border_color: "grey",
+    corner_radius: "8px",
+    padding: "4px 12px 4px 12px",
+    behaviors: [
+      {
+        type: "callback",
+        value: {
+          action: "model_select",
+          session_id: data.sessionId,
+          model_id: m.modelId,
+        },
+      },
+    ],
+    elements: [
+      {
+        tag: "markdown",
+        content: m.label,
+      },
+    ],
   }))
 
   return {
-    config: { wide_screen_mode: true },
-    elements: [{ tag: "action", actions }],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "top",
+              vertical_spacing: "8px",
+              elements: interactiveContainers,
+            },
+          ],
+        },
+      ],
+    },
   }
 }
 
 export function buildSelectedCard(text: string): Record<string, unknown> {
   return {
-    config: { wide_screen_mode: true },
-    elements: [{ tag: "markdown", content: text }],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [{ tag: "markdown", content: text }],
+    },
   }
 }
 
@@ -202,16 +415,22 @@ export function buildPermissionSelectedCard(
   data: PermissionSelectedCardData,
 ): Record<string, unknown> {
   return {
-    config: { wide_screen_mode: true },
-    elements: [
-      {
-        tag: "markdown",
-        content: data.toolDescription,
-      },
-      {
-        tag: "markdown",
-        content: `**已选择：** ${data.selectedLabel}`,
-      },
-    ],
+    schema: "2.0",
+    config: {
+      wide_screen_mode: true,
+      update_multi: true,
+    },
+    body: {
+      elements: [
+        {
+          tag: "markdown",
+          content: data.toolDescription,
+        },
+        {
+          tag: "markdown",
+          content: `**已选择：** ${data.selectedLabel}`,
+        },
+      ],
+    },
   }
 }
