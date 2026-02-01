@@ -48,9 +48,3 @@
 - SHOULD 通过工具获取最新文档（`man`、context7 MCP、fetch 工具等）；常识性内容除外。
 - MUST NOT 使用 `curl` 等原始 HTTP 请求自行抓取网页。
 - 无法理解所用工具/库的用法时 MUST NOT 继续编码。
-
-### 单元测试
-
-- SHOULD 为非 trivial 代码编写单元测试（无测试框架时除外）。
-- 测试须可读、覆盖边界情况。
-- MUST NOT 写欺骗覆盖率的测试（无断言、trivially pass、只测无用代码等）。

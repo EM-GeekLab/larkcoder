@@ -7,7 +7,6 @@
     "dev": "NODE_ENV=development bun src/index.ts",
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit",
-    "test": "bun test",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
