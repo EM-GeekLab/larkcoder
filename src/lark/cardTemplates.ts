@@ -187,3 +187,26 @@ export function buildSelectedCard(text: string): Record<string, unknown> {
     elements: [{ tag: "markdown", content: text }],
   }
 }
+
+type PermissionSelectedCardData = {
+  toolDescription: string
+  selectedLabel: string
+}
+
+export function buildPermissionSelectedCard(
+  data: PermissionSelectedCardData,
+): Record<string, unknown> {
+  return {
+    config: { wide_screen_mode: true },
+    elements: [
+      {
+        tag: "markdown",
+        content: data.toolDescription,
+      },
+      {
+        tag: "markdown",
+        content: `**已选择：** ${data.selectedLabel}`,
+      },
+    ],
+  }
+}

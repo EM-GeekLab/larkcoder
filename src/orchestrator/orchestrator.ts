@@ -15,6 +15,7 @@ import {
   STREAMING_ELEMENT_ID,
   buildModelSelectCard,
   buildPermissionCard,
+  buildPermissionSelectedCard,
   buildSelectedCard,
   buildSessionDeleteCard,
   buildSessionListCard,
@@ -33,6 +34,8 @@ type PermissionResolver = {
   resolve: (resp: acp.RequestPermissionResponse) => void
   cardMessageId: string
   timer: ReturnType<typeof setTimeout>
+  toolDescription: string
+  options: Array<{ optionId: string; label: string }>
 }
 
 type StreamingCard = {
@@ -434,8 +437,8 @@ export class Orchestrator {
     sessionId: string,
     params: acp.RequestPermissionRequest,
   ): Promise<acp.RequestPermissionResponse> {
-    // Flush streaming card so latest output is visible
-    await this.forceFlush(sessionId)
+    // Pause streaming and close current card before showing permission request
+    await this.pauseStreamingForInteraction(sessionId, "(等待授权)")
 
     const session = await this.sessionService.getSession(sessionId)
 
@@ -469,6 +472,8 @@ export class Orchestrator {
           resolve,
           cardMessageId: resolverKey,
           timer,
+          toolDescription: params.toolCall?.title ?? "Permission required",
+          options,
         })
       } else {
         clearTimeout(timer)
@@ -494,11 +499,21 @@ export class Orchestrator {
     clearTimeout(resolver.timer)
     active.permissionResolvers.delete(cardMessageId)
 
-    // Update card to show selection
+    // Find the selected option label
+    const selectedOption = resolver.options.find((opt) => opt.optionId === optionId)
+    const selectedLabel = selectedOption?.label ?? optionId
+
+    // Update card to show only the selected option, without buttons
     await this.larkClient.updateCard(
       cardMessageId,
-      buildSelectedCard(`Selected: ${optionId}`),
+      buildPermissionSelectedCard({
+        toolDescription: resolver.toolDescription,
+        selectedLabel,
+      }),
     )
+
+    // Resume streaming with a new card after permission is granted
+    await this.resumeStreamingAfterInteraction(sessionId, cardMessageId, "")
 
     // Resolve the permission promise
     resolver.resolve({
@@ -745,6 +760,32 @@ export class Orchestrator {
     }
 
     await this.flushStreamingCard(sessionId)
+  }
+
+  private async pauseStreamingForInteraction(
+    sessionId: string,
+    defaultSummary: string = "(等待操作)",
+  ): Promise<string | null> {
+    const active = this.activeSessions.get(sessionId)
+    if (!active?.streamingCard) {
+      return null
+    }
+
+    // Generate summary from accumulated text
+    const summaryText = active.streamingCard.accumulatedText.slice(0, 100)
+    const summary =
+      summaryText.length > 0 ? `${summaryText}...` : defaultSummary
+
+    await this.closeStreamingCard(sessionId, summary)
+    return summary
+  }
+
+  private async resumeStreamingAfterInteraction(
+    sessionId: string,
+    replyToMessageId: string,
+    initialContent: string = "",
+  ): Promise<void> {
+    await this.createStreamingCard(sessionId, replyToMessageId, initialContent)
   }
 
   private async closeStreamingCard(
