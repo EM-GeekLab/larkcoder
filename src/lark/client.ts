@@ -233,6 +233,25 @@ export class LarkClient {
     }
   }
 
+  async updateCardElement(
+    cardId: string,
+    elementId: string,
+    element: Record<string, unknown>,
+    sequence: number,
+  ): Promise<void> {
+    try {
+      await this.sdk.cardkit.v1.cardElement.update({
+        path: { card_id: cardId, element_id: elementId },
+        data: {
+          element: JSON.stringify(element),
+          sequence,
+        },
+      })
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to update card element")
+    }
+  }
+
   async deleteCardElement(cardId: string, elementId: string, sequence: number): Promise<void> {
     try {
       await this.sdk.cardkit.v1.cardElement.delete({

@@ -48,6 +48,7 @@ type StreamingCard = {
   flushTimer: ReturnType<typeof setTimeout> | null
   streamingOpen: boolean
   streamingOpenedAt: number
+  placeholderReplaced: boolean
 }
 
 type ActiveSession = {
@@ -226,7 +227,7 @@ export class Orchestrator {
       await this.sessionService.setRunning(sessionId)
 
       // Create streaming card
-      await this.createStreamingCard(sessionId, replyToMessageId, "Pending...")
+      await this.createStreamingCard(sessionId, replyToMessageId, "")
 
       // Send prompt
       const active = this.activeSessions.get(sessionId)
@@ -635,6 +636,7 @@ export class Orchestrator {
       flushTimer: null,
       streamingOpen: true,
       streamingOpenedAt: Date.now(),
+      placeholderReplaced: initialContent.length > 0,
     }
   }
 
@@ -667,7 +669,24 @@ export class Orchestrator {
     const content = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
     const seq = this.nextSequence(sessionId)
 
-    await this.larkClient.streamCardText(card.cardId, STREAMING_ELEMENT_ID, content, seq)
+    // Replace placeholder with actual content when content appears for the first time
+    if (!card.placeholderReplaced && card.accumulatedText.length > 0) {
+      // Use updateCardElement to replace placeholder element with actual content element
+      await this.larkClient.updateCardElement(
+        card.cardId,
+        STREAMING_ELEMENT_ID,
+        {
+          tag: "markdown",
+          content,
+          element_id: STREAMING_ELEMENT_ID,
+        },
+        seq,
+      )
+      card.placeholderReplaced = true
+    } else {
+      // Continue streaming content updates
+      await this.larkClient.streamCardText(card.cardId, STREAMING_ELEMENT_ID, content, seq)
+    }
 
     card.lastFlushedText = card.accumulatedText
   }

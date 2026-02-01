@@ -18,6 +18,30 @@ export const STREAMING_ELEMENT_ID = "md_stream"
 export const PROCESSING_ELEMENT_ID = "processing_indicator"
 
 export function buildStreamingCard(initialContent?: string): Record<string, unknown> {
+  const hasContent = initialContent && initialContent.length > 0
+  const placeholderText = "<font color='grey-500'>Pending...</font>"
+
+  const elements: Record<string, unknown>[] = [
+    // Streaming markdown element - shows placeholder when no content, actual content when available
+    {
+      tag: "markdown",
+      content: hasContent ? initialContent : placeholderText,
+      element_id: STREAMING_ELEMENT_ID,
+    },
+    // Add processing indicator
+    {
+      tag: "markdown",
+      content: "<font color='grey-500'>Processing...</font>",
+      text_size: "notation",
+      element_id: PROCESSING_ELEMENT_ID,
+      icon: {
+        tag: "standard_icon",
+        token: "down-right_outlined",
+        color: "light_grey",
+      },
+    },
+  ]
+
   return {
     schema: "2.0",
     config: {
@@ -31,24 +55,7 @@ export function buildStreamingCard(initialContent?: string): Record<string, unkn
       },
     },
     body: {
-      elements: [
-        {
-          tag: "markdown",
-          content: initialContent ?? "",
-          element_id: STREAMING_ELEMENT_ID,
-        },
-        {
-          tag: "markdown",
-          content: "<font color='grey-500'>Processing...</font>",
-          text_size: "notation",
-          element_id: PROCESSING_ELEMENT_ID,
-          icon: {
-            tag: "standard_icon",
-            token: "down-right_outlined",
-            color: "light_grey",
-          },
-        },
-      ],
+      elements,
     },
   }
 }
