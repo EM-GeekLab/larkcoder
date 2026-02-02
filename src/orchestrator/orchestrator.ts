@@ -626,32 +626,53 @@ export class Orchestrator {
           const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
           this.logger.withMetadata({ sessionId, tool: title, kind }).debug("Agent tool call")
           if (title) {
-            await this.ensureStreamingCard(sessionId)
-            if (active.streamingCard) {
-              await this.forceFlush(sessionId)
-              if (!active.streamingCard.placeholderReplaced) {
-                const seq = this.nextSequence(sessionId)
-                await this.larkClient.deleteCardElement(active.streamingCard.cardId, "md_0", seq)
-                active.streamingCard.placeholderReplaced = true
-                active.streamingCard.activeElementId = null
+            // Check if this tool call already has an element — update in-place
+            const existing = toolCallId ? active.toolCallElements.get(toolCallId) : undefined
+            if (existing) {
+              const updatedKind = kind ?? existing.kind
+              const seq = this.nextSequenceForCard(active, existing.cardId)
+              await this.larkClient.updateCardElement(
+                existing.cardId,
+                existing.elementId,
+                buildToolCallElement(existing.elementId, title, updatedKind),
+                seq,
+              )
+              existing.title = title
+              if (updatedKind !== undefined) {
+                existing.kind = updatedKind
               }
-              const toolElementId = this.nextElementId(sessionId, "tool")
-              await this.insertElement(sessionId, buildToolCallElement(toolElementId, title, kind))
-              const card = active.streamingCard
-              if (!card) {
-                break
+            } else {
+              // New tool call — create element
+              await this.ensureStreamingCard(sessionId)
+              if (active.streamingCard) {
+                await this.forceFlush(sessionId)
+                if (!active.streamingCard.placeholderReplaced) {
+                  const seq = this.nextSequence(sessionId)
+                  await this.larkClient.deleteCardElement(active.streamingCard.cardId, "md_0", seq)
+                  active.streamingCard.placeholderReplaced = true
+                  active.streamingCard.activeElementId = null
+                }
+                const toolElementId = this.nextElementId(sessionId, "tool")
+                await this.insertElement(
+                  sessionId,
+                  buildToolCallElement(toolElementId, title, kind),
+                )
+                const card = active.streamingCard
+                if (!card) {
+                  break
+                }
+                if (toolCallId) {
+                  active.toolCallElements.set(toolCallId, {
+                    elementId: toolElementId,
+                    cardId: card.cardId,
+                    kind,
+                    title,
+                  })
+                }
+                card.activeElementId = null
+                card.accumulatedText = ""
+                card.lastFlushedText = ""
               }
-              if (toolCallId) {
-                active.toolCallElements.set(toolCallId, {
-                  elementId: toolElementId,
-                  cardId: card.cardId,
-                  kind,
-                  title,
-                })
-              }
-              card.activeElementId = null
-              card.accumulatedText = ""
-              card.lastFlushedText = ""
             }
           }
           break
