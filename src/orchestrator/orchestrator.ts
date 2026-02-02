@@ -817,8 +817,6 @@ export class Orchestrator {
     const newId = this.nextElementId(sessionId, "md")
     await this.insertElement(sessionId, buildStreamingMarkdownElement(newId))
     card.activeElementId = newId
-    card.accumulatedText = ""
-    card.lastFlushedText = ""
     return newId
   }
 
