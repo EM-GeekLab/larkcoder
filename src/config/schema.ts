@@ -19,6 +19,7 @@ const rawConfigSchema = z.object({
   database: z
     .object({
       path: z.string().min(1).default("data/larkcoder.db"),
+      event_max_age: z.number().int().positive().default(86400),
     })
     .optional(),
 })
@@ -41,6 +42,7 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
   },
   database: {
     path: raw.database?.path ?? "data/larkcoder.db",
+    eventMaxAge: raw.database?.event_max_age ?? 86400,
   },
 }))
 

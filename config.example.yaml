@@ -10,3 +10,4 @@ agent:
 
 database:
   path: "data/larkcoder.db"
+  event_max_age: 86400  # seconds, default 1 day

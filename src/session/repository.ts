@@ -22,7 +22,10 @@ function rowToSession(row: typeof sessions.$inferSelect): Session {
 }
 
 export class SessionRepository {
-  constructor(private db: DrizzleDB) {}
+  constructor(
+    private db: DrizzleDB,
+    private eventMaxAgeMs: number,
+  ) {}
 
   async create(id: string, params: CreateSessionParams): Promise<Session> {
     const now = new Date().toISOString()
@@ -128,6 +131,7 @@ export class SessionRepository {
   }
 
   async markEventProcessed(eventId: string): Promise<void> {
+    await this.cleanOldEvents(this.eventMaxAgeMs)
     const now = new Date().toISOString()
     await this.db
       .insert(processedEvents)

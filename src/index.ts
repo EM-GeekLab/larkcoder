@@ -25,7 +25,7 @@ async function main(): Promise<void> {
 
   // Initialize data layer
   const { db, close: closeDb } = await createDatabase(config.database.path)
-  const sessionRepo = new SessionRepository(db)
+  const sessionRepo = new SessionRepository(db, config.database.eventMaxAge * 1000)
   const sessionService = new SessionService(sessionRepo, createLogger({ prefix: "session" }))
 
   // Initialize process manager
