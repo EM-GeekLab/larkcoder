@@ -1,16 +1,12 @@
 lark:
   app_id: "cli_xxxxxx"
   app_secret: "your_app_secret"
-  # doc_token: "doxcnxxxxxxxx"
-  # doc_type: "docx"
 
 agent:
   command: "claude-code-acp"
   args: []
   working_dir: "/home/deploy/projects"
   max_turns: 50
-  # system_prompt: |
-  #   你在一个自动化环境中工作。
 
 database:
   path: "data/larkcoder.db"
