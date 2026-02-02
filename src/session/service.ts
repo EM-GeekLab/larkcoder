@@ -65,6 +65,10 @@ export class SessionService {
     return this.getSession(id)
   }
 
+  async touchSession(id: string): Promise<void> {
+    await this.repo.touch(id)
+  }
+
   async setAcpSessionId(id: string, acpSessionId: string): Promise<void> {
     await this.repo.updateAcpSessionId(id, acpSessionId)
   }

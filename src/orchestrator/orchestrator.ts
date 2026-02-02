@@ -132,7 +132,7 @@ export class Orchestrator {
 
       case "session_select":
         if (action.sessionId) {
-          await this.handleSessionSelect(action.sessionId, action.openMessageId, action.openChatId)
+          await this.handleSessionSelect(action.sessionId, action.openMessageId)
         }
         break
 
@@ -490,22 +490,19 @@ export class Orchestrator {
     })
   }
 
-  private async handleSessionSelect(
-    sessionId: string,
-    cardMessageId: string,
-    chatId: string,
-  ): Promise<void> {
+  private async handleSessionSelect(sessionId: string, cardMessageId: string): Promise<void> {
     try {
       const session = await this.sessionService.getSession(sessionId)
       const label = session.initialPrompt.slice(0, 50)
+
+      // Touch session to make it the most recent for resolveSession
+      await this.sessionService.touchSession(sessionId)
 
       // Update card to show selection
       await this.larkClient.updateCard(
         cardMessageId,
         buildSelectedCard(`Resumed session: ${label}`),
       )
-
-      await this.larkClient.sendMarkdownCard(chatId, `Switched to session: ${label}`)
     } catch {
       await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }

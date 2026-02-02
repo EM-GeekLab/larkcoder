@@ -64,7 +64,7 @@ export class SessionRepository {
       .select()
       .from(sessions)
       .where(eq(sessions.chatId, chatId))
-      .orderBy(desc(sessions.createdAt))
+      .orderBy(desc(sessions.updatedAt))
       .limit(1)
       .get()
     return row ? rowToSession(row) : null
@@ -99,6 +99,11 @@ export class SessionRepository {
       .update(sessions)
       .set({ workingMessageId, updatedAt: now })
       .where(eq(sessions.id, id))
+  }
+
+  async touch(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    await this.db.update(sessions).set({ updatedAt: now }).where(eq(sessions.id, id))
   }
 
   async updatePlanMode(id: string, isPlanMode: boolean): Promise<void> {
