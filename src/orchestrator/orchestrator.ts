@@ -405,7 +405,9 @@ export class Orchestrator {
     })
 
     this.logger.withMetadata({ sessionId: session.id }).debug("Initializing ACP connection")
-    await acpClient.initialize()
+    const initResponse = await acpClient.initialize()
+    const agentCapabilities = initResponse.agentCapabilities ?? undefined
+    const supportsResume = !!agentCapabilities?.sessionCapabilities?.resume
 
     let acpSessionId: string
     let modelState: {
@@ -418,7 +420,7 @@ export class Orchestrator {
     } | null = null
     let configOptions: acp.SessionConfigOption[] | null = null
 
-    if (session.acpSessionId) {
+    if (session.acpSessionId && supportsResume) {
       this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
       const resumeResponse = await acpClient.resumeSession({
         sessionId: session.acpSessionId,
@@ -452,6 +454,7 @@ export class Orchestrator {
       currentMode: modeState?.currentModeId ?? session.mode,
       currentModel: modelState?.currentModelId,
       configOptions: configOptions ?? undefined,
+      agentCapabilities,
       permissionResolvers: new Map(),
       toolCallElements: new Map(),
       cardSequences: new Map(),

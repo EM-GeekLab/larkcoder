@@ -69,8 +69,10 @@ class MockAgent implements acp.Agent {
       protocolVersion: acp.PROTOCOL_VERSION,
       agentCapabilities: {
         loadSession: false,
-        resume: {}, // Support session resume capability
-      } as acp.AgentCapabilities,
+        sessionCapabilities: {
+          resume: {},
+        },
+      },
     }
   }
 
