@@ -22,4 +22,5 @@ export type CardAction = {
   sessionId?: string
   optionId?: string
   modelId?: string
+  modeId?: string
 }

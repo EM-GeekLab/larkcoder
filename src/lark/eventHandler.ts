@@ -158,6 +158,7 @@ export class LarkEventHandler {
       sessionId: value.session_id,
       optionId: value.option_id,
       modelId: value.model_id,
+      modeId: value.mode_id,
     }
   }
 }

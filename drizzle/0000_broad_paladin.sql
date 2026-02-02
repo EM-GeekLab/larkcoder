@@ -14,7 +14,7 @@ CREATE TABLE `sessions` (
 	`working_dir` text NOT NULL,
 	`doc_token` text,
 	`working_message_id` text,
-	`is_plan_mode` integer DEFAULT false NOT NULL,
+	`mode` text DEFAULT 'default' NOT NULL,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL
 );

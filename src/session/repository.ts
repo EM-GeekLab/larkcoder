@@ -1,6 +1,6 @@
 import { desc, eq, lt } from "drizzle-orm"
 import type { DrizzleDB } from "./db.js"
-import type { CreateSessionParams, Session, SessionStatus } from "./types.js"
+import type { CreateSessionParams, Session, SessionMode, SessionStatus } from "./types.js"
 import { processedEvents, sessions } from "./schema.js"
 
 function rowToSession(row: typeof sessions.$inferSelect): Session {
@@ -9,13 +9,13 @@ function rowToSession(row: typeof sessions.$inferSelect): Session {
     chatId: row.chatId,
     threadId: row.threadId,
     creatorId: row.creatorId,
-    status: row.status as SessionStatus,
+    status: row.status,
     initialPrompt: row.initialPrompt,
     acpSessionId: row.acpSessionId ?? undefined,
     workingDir: row.workingDir,
     docToken: row.docToken ?? undefined,
     workingMessageId: row.workingMessageId ?? undefined,
-    isPlanMode: row.isPlanMode,
+    mode: row.mode,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -38,7 +38,7 @@ export class SessionRepository {
       initialPrompt: params.initialPrompt,
       workingDir: params.workingDir,
       docToken: params.docToken ?? null,
-      isPlanMode: false,
+      mode: "default",
       createdAt: now,
       updatedAt: now,
     })
@@ -110,15 +110,12 @@ export class SessionRepository {
 
   async updateInitialPrompt(id: string, initialPrompt: string): Promise<void> {
     const now = new Date().toISOString()
-    await this.db
-      .update(sessions)
-      .set({ initialPrompt, updatedAt: now })
-      .where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ initialPrompt, updatedAt: now }).where(eq(sessions.id, id))
   }
 
-  async updatePlanMode(id: string, isPlanMode: boolean): Promise<void> {
+  async updateMode(id: string, mode: SessionMode): Promise<void> {
     const now = new Date().toISOString()
-    await this.db.update(sessions).set({ isPlanMode, updatedAt: now }).where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ mode, updatedAt: now }).where(eq(sessions.id, id))
   }
 
   async isEventProcessed(eventId: string): Promise<boolean> {

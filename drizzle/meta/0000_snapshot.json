@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3b43e967-0835-4bc4-bd8e-aedeb70ea864",
+  "id": "9f63c51e-7116-43d6-9ba3-2b7e52fe5b23",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "processed_events": {
@@ -102,13 +102,13 @@
           "notNull": false,
           "autoincrement": false
         },
-        "is_plan_mode": {
-          "name": "is_plan_mode",
-          "type": "integer",
+        "mode": {
+          "name": "mode",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": "'default'"
         },
         "created_at": {
           "name": "created_at",

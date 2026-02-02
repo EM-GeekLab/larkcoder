@@ -1,4 +1,17 @@
 export type SessionStatus = "idle" | "running"
+export type SessionMode = "default" | "acceptEdits" | "plan" | "dontAsk" | "bypassPermissions"
+
+const SESSION_MODES: Set<string> = new Set<SessionMode>([
+  "default",
+  "acceptEdits",
+  "plan",
+  "dontAsk",
+  "bypassPermissions",
+])
+
+export function isSessionMode(value: string): value is SessionMode {
+  return SESSION_MODES.has(value)
+}
 
 export type Session = {
   id: string
@@ -13,7 +26,7 @@ export type Session = {
   docToken?: string
   /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
   workingMessageId?: string
-  isPlanMode: boolean
+  mode: SessionMode
   createdAt: string
   updatedAt: string
 }

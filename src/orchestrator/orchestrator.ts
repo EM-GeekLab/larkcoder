@@ -6,13 +6,13 @@ import type { LarkClient } from "../lark/client.js"
 import type { DocService } from "../lark/docService.js"
 import type { CardAction, ParsedMessage } from "../lark/types.js"
 import type { SessionService } from "../session/service.js"
-import type { Session } from "../session/types.js"
 import type { Logger } from "../utils/logger.js"
 import { createAcpClient } from "../agent/acpClient.js"
-import { CommandHandler } from "../command/handler.js"
+import { CommandHandler, MODE_DISPLAY } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
   PROCESSING_ELEMENT_ID,
+  buildModeSelectCard,
   buildModelSelectCard,
   buildPermissionCard,
   buildPermissionSelectedCard,
@@ -25,6 +25,7 @@ import {
   buildToolCallElement,
 } from "../lark/cardTemplates.js"
 import { createDocTools } from "../lark/docTools.js"
+import { isSessionMode, type Session, type SessionMode } from "../session/types.js"
 import { extractErrorMessage } from "../utils/errors.js"
 
 const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
@@ -69,6 +70,7 @@ type ActiveSession = {
   acpSessionId: string
   availableCommands: string[]
   currentMode: string
+  currentModel?: string
   streamingCard?: StreamingCard
   streamingCardPending?: Promise<void>
   permissionResolvers: Map<string, PermissionResolver>
@@ -139,6 +141,12 @@ export class Orchestrator {
       case "model_select":
         if (action.sessionId && action.modelId) {
           await this.handleModelSelectAction(action.sessionId, action.modelId, action.openMessageId)
+        }
+        break
+
+      case "mode_select":
+        if (action.sessionId && action.modeId && isSessionMode(action.modeId)) {
+          await this.handleModeSelectAction(action.sessionId, action.modeId, action.openMessageId)
         }
         break
 
@@ -222,6 +230,7 @@ export class Orchestrator {
   }
 
   async handleModelSelect(sessionId: string, message: ParsedMessage): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
     const models = [
       { modelId: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
       {
@@ -230,7 +239,14 @@ export class Orchestrator {
       },
       { modelId: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
     ]
-    const card = buildModelSelectCard({ sessionId, models })
+    const card = buildModelSelectCard({ sessionId, currentModel: active?.currentModel, models })
+    await this.larkClient.replyCard(message.messageId, card)
+  }
+
+  async handleModeSelect(sessionId: string, message: ParsedMessage): Promise<void> {
+    const session = await this.sessionService.getSession(sessionId)
+    const modes = Object.entries(MODE_DISPLAY).map(([modeId, label]) => ({ modeId, label }))
+    const card = buildModeSelectCard({ sessionId, currentMode: session.mode, modes })
     await this.larkClient.replyCard(message.messageId, card)
   }
 
@@ -421,8 +437,8 @@ export class Orchestrator {
       cardSequences: new Map(),
     })
 
-    if (session.isPlanMode) {
-      await this.setSessionMode(session.id, "plan")
+    if (session.mode !== "default") {
+      await this.setSessionMode(session.id, session.mode)
     }
   }
 
@@ -520,9 +536,10 @@ export class Orchestrator {
       await this.sessionService.touchSession(sessionId)
 
       // Update card to show selection
+      const modeLabel = session.mode === "default" ? "" : `\nMode: ${session.mode}`
       await this.larkClient.updateCard(
         cardMessageId,
-        buildSelectedCard(`Resumed session: ${label}`),
+        buildSelectedCard(`Resumed session: ${label}${modeLabel}`),
       )
     } catch (error: unknown) {
       this.logger.withError(error as Error).warn(`Session not found: ${sessionId}`)
@@ -542,12 +559,24 @@ export class Orchestrator {
           sessionId: active.acpSessionId,
           modelId,
         })
+        active.currentModel = modelId
       } catch (error: unknown) {
         this.logger.withError(error as Error).error("Failed to set session model")
       }
     }
 
     await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Model: ${modelId}`))
+  }
+
+  private async handleModeSelectAction(
+    sessionId: string,
+    modeId: SessionMode,
+    cardMessageId: string,
+  ): Promise<void> {
+    await this.sessionService.setMode(sessionId, modeId)
+    await this.setSessionMode(sessionId, modeId)
+    const display = MODE_DISPLAY[modeId] ?? modeId
+    await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Mode: ${display}`))
   }
 
   private async handleSessionDeleteAction(sessionId: string, cardMessageId: string): Promise<void> {
@@ -631,10 +660,10 @@ export class Orchestrator {
         }
         case "current_mode_update": {
           const modeId = (update as Record<string, unknown>).currentModeId as string | undefined
-          if (modeId) {
+          if (modeId && isSessionMode(modeId)) {
             this.logger.withMetadata({ sessionId, modeId }).trace("Mode update")
             active.currentMode = modeId
-            await this.sessionService.setPlanMode(sessionId, modeId === "plan")
+            await this.sessionService.setMode(sessionId, modeId)
           }
           break
         }

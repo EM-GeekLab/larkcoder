@@ -2,6 +2,7 @@ import type { LarkClient } from "../lark/client.js"
 import type { ParsedMessage } from "../lark/types.js"
 import type { Orchestrator } from "../orchestrator/orchestrator.js"
 import type { SessionService } from "../session/service.js"
+import type { SessionMode } from "../session/types.js"
 import type { Logger } from "../utils/logger.js"
 import type { ParsedCommand } from "./parser.js"
 
@@ -13,10 +14,29 @@ const LOCAL_COMMANDS = new Set([
   "resume",
   "delete",
   "plan",
+  "solo",
+  "yolo",
+  "mode",
   "info",
   "model",
   "help",
 ])
+
+const MODE_MAP: Record<string, SessionMode> = {
+  default: "default",
+  "accept-edits": "acceptEdits",
+  plan: "plan",
+  "dont-ask": "dontAsk",
+  bypass: "bypassPermissions",
+}
+
+export const MODE_DISPLAY: Record<string, string> = {
+  default: "Default",
+  acceptEdits: "Accept Edits",
+  plan: "Plan",
+  dontAsk: "Don't Ask",
+  bypassPermissions: "Bypass Permissions ⚡",
+}
 
 const HELP_TEXT = `Available commands:
 /help — Show this help message
@@ -27,6 +47,8 @@ const HELP_TEXT = `Available commands:
 /delete — Delete a session
 /stop — Stop the running agent
 /plan — Toggle plan mode
+/solo — Toggle solo mode (bypass all permissions)
+/mode [name] — Show or switch mode (default, accept-edits, plan, dont-ask, bypass)
 /info — Show current session info
 /model — Select model`
 
@@ -78,6 +100,15 @@ export class CommandHandler {
         await this.handlePlan(message)
         break
 
+      case "solo":
+      case "yolo":
+        await this.handleSolo(message)
+        break
+
+      case "mode":
+        await this.handleMode(parsed.args, message)
+        break
+
       case "info":
         await this.handleInfo(message)
         break
@@ -116,11 +147,47 @@ export class CommandHandler {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
-    const newMode = !session.isPlanMode
-    await this.sessionService.setPlanMode(session.id, newMode)
-    await this.orchestrator.setSessionMode(session.id, newMode ? "plan" : "default")
-    const label = newMode ? "Plan mode enabled" : "Plan mode disabled"
-    await this.larkClient.replyMarkdownCard(message.messageId, label)
+    const newMode = session.mode === "plan" ? "default" : "plan"
+    await this.switchMode(session.id, newMode, message.messageId)
+  }
+
+  private async handleSolo(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+      return
+    }
+    const newMode = session.mode === "bypassPermissions" ? "default" : "bypassPermissions"
+    await this.switchMode(session.id, newMode, message.messageId)
+  }
+
+  private async handleMode(args: string, message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+      return
+    }
+    if (!args) {
+      await this.orchestrator.handleModeSelect(session.id, message)
+      return
+    }
+    const modeId = MODE_MAP[args]
+    if (!modeId) {
+      const available = Object.keys(MODE_MAP).join(", ")
+      await this.larkClient.replyMarkdownCard(
+        message.messageId,
+        `Unknown mode: ${args}\nAvailable: ${available}`,
+      )
+      return
+    }
+    await this.switchMode(session.id, modeId, message.messageId)
+  }
+
+  private async switchMode(sessionId: string, modeId: SessionMode, replyTo: string): Promise<void> {
+    await this.sessionService.setMode(sessionId, modeId)
+    await this.orchestrator.setSessionMode(sessionId, modeId)
+    const display = MODE_DISPLAY[modeId] ?? modeId
+    await this.larkClient.replyMarkdownCard(replyTo, `Mode: ${display}`)
   }
 
   private async handleInfo(message: ParsedMessage): Promise<void> {
@@ -134,7 +201,7 @@ export class CommandHandler {
       `Session: ${session.id}`,
       `Status: ${session.status}`,
       `Prompt: ${session.initialPrompt.slice(0, 100)}`,
-      `Plan mode: ${session.isPlanMode ? "on" : "off"}`,
+      `Mode: ${MODE_DISPLAY[session.mode] ?? session.mode}`,
       `Created: ${session.createdAt}`,
     ]
 

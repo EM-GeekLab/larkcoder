@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { index, sqliteTable, text } from "drizzle-orm/sqlite-core"
 
 export const sessions = sqliteTable(
   "sessions",
@@ -7,7 +7,9 @@ export const sessions = sqliteTable(
     chatId: text("chat_id").notNull(),
     threadId: text("thread_id").notNull(),
     creatorId: text("creator_id").notNull(),
-    status: text("status").notNull().default("idle"),
+    status: text("status", { enum: ["idle", "running"] })
+      .notNull()
+      .default("idle"),
     initialPrompt: text("initial_prompt").notNull(),
     acpSessionId: text("acp_session_id"),
     workingDir: text("working_dir").notNull(),
@@ -15,7 +17,11 @@ export const sessions = sqliteTable(
     docToken: text("doc_token"),
     /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
     workingMessageId: text("working_message_id"),
-    isPlanMode: integer("is_plan_mode", { mode: "boolean" }).notNull().default(false),
+    mode: text("mode", {
+      enum: ["default", "acceptEdits", "plan", "dontAsk", "bypassPermissions"],
+    })
+      .notNull()
+      .default("default"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
