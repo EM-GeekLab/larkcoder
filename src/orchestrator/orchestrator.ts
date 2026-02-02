@@ -214,7 +214,8 @@ export class Orchestrator {
       return
     }
 
-    const card = buildSessionListCard({ sessions })
+    const current = await this.resolveSession(message)
+    const card = buildSessionListCard({ sessions, currentSessionId: current?.id })
     await this.larkClient.replyCard(message.messageId, card)
   }
 
@@ -225,7 +226,8 @@ export class Orchestrator {
       return
     }
 
-    const card = buildSessionDeleteCard({ sessions })
+    const current = await this.resolveSession(message)
+    const card = buildSessionDeleteCard({ sessions, currentSessionId: current?.id })
     await this.larkClient.replyCard(message.messageId, card)
   }
 
