@@ -99,9 +99,12 @@ function buildToolCallMarkdown(
   kind?: string,
   textColor?: string,
   iconColor?: string,
+  label?: string,
 ): Record<string, unknown> {
-  const escaped = escapeLarkMd(title)
-  const content = textColor ? `<font color='${textColor}'>${escaped}</font>` : escaped
+  const sanitized = kind === "execute" ? title : title.replace(/`/g, '"')
+  const escaped = escapeLarkMd(sanitized)
+  const prefixed = label ? `${label} ${escaped}` : escaped
+  const content = textColor ? `<font color='${textColor}'>${prefixed}</font>` : prefixed
   return {
     tag: "markdown",
     content,
@@ -120,6 +123,7 @@ export function buildToolCallElement(
   kind?: string,
   status?: string,
   duration?: string,
+  label?: string,
 ): Record<string, unknown> {
   let textColor: string | undefined
   let iconColor: string
@@ -151,7 +155,7 @@ export function buildToolCallElement(
         tag: "column",
         width: "auto",
         vertical_align: "center",
-        elements: [buildToolCallMarkdown(title, kind, textColor, iconColor)],
+        elements: [buildToolCallMarkdown(title, kind, textColor, iconColor, label)],
       },
       {
         tag: "column",

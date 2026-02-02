@@ -5,6 +5,7 @@ import type { Logger } from "../utils/logger.js"
 import type { StreamingCardManager } from "./streamingCardManager.js"
 import { buildToolCallElement } from "../lark/cards/index.js"
 import { isSessionMode } from "../session/types.js"
+import { extractToolCallDisplay, resolveLabelForTitle } from "./toolCallDisplay.js"
 import { formatDuration, type ActiveSessionLookup, type SessionLockFn } from "./types.js"
 
 export class SessionUpdateHandler {
@@ -68,59 +69,67 @@ export class SessionUpdateHandler {
           break
         }
         case "tool_call": {
-          const title = (update as Record<string, unknown>).title as string | undefined
-          const kind = (update as Record<string, unknown>).kind as string | undefined
           const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
+          const display = extractToolCallDisplay(update as Record<string, unknown>)
+          const { title, kind, label } = display
           this.logger
             .withMetadata({ sessionId, toolCallId, tool: title, kind })
             .debug("Agent tool call")
-          if (title) {
-            const existing = toolCallId ? active.toolCallElements.get(toolCallId) : undefined
-            if (existing) {
-              const updatedKind = kind ?? existing.kind
-              const seq = this.streamingCardManager.nextSequenceForCard(active, existing.cardId)
-              await this.larkClient.updateCardElement(
-                existing.cardId,
+          const existing = toolCallId ? active.toolCallElements.get(toolCallId) : undefined
+          if (existing) {
+            const updatedKind = kind ?? existing.kind
+            const updatedLabel = label ?? existing.label
+            const seq = this.streamingCardManager.nextSequenceForCard(active, existing.cardId)
+            await this.larkClient.updateCardElement(
+              existing.cardId,
+              existing.elementId,
+              buildToolCallElement(
                 existing.elementId,
-                buildToolCallElement(existing.elementId, title, updatedKind),
-                seq,
+                title,
+                updatedKind,
+                undefined,
+                undefined,
+                updatedLabel,
+              ),
+              seq,
+            )
+            existing.title = title
+            existing.label = updatedLabel
+            if (updatedKind !== undefined) {
+              existing.kind = updatedKind
+            }
+          } else {
+            await this.streamingCardManager.ensureStreamingCard(active)
+            if (active.streamingCard) {
+              await this.streamingCardManager.forceFlush(active)
+              if (!active.streamingCard.placeholderReplaced) {
+                const seq = this.streamingCardManager.nextSequence(active)
+                await this.larkClient.deleteCardElement(active.streamingCard.cardId, "md_0", seq)
+                active.streamingCard.placeholderReplaced = true
+                active.streamingCard.activeElementId = null
+              }
+              const toolElementId = this.streamingCardManager.nextElementId(active, "tool")
+              await this.streamingCardManager.insertElement(
+                active,
+                buildToolCallElement(toolElementId, title, kind, undefined, undefined, label),
               )
-              existing.title = title
-              if (updatedKind !== undefined) {
-                existing.kind = updatedKind
+              const card = active.streamingCard
+              if (!card) {
+                break
               }
-            } else {
-              await this.streamingCardManager.ensureStreamingCard(active)
-              if (active.streamingCard) {
-                await this.streamingCardManager.forceFlush(active)
-                if (!active.streamingCard.placeholderReplaced) {
-                  const seq = this.streamingCardManager.nextSequence(active)
-                  await this.larkClient.deleteCardElement(active.streamingCard.cardId, "md_0", seq)
-                  active.streamingCard.placeholderReplaced = true
-                  active.streamingCard.activeElementId = null
-                }
-                const toolElementId = this.streamingCardManager.nextElementId(active, "tool")
-                await this.streamingCardManager.insertElement(
-                  active,
-                  buildToolCallElement(toolElementId, title, kind),
-                )
-                const card = active.streamingCard
-                if (!card) {
-                  break
-                }
-                if (toolCallId) {
-                  active.toolCallElements.set(toolCallId, {
-                    elementId: toolElementId,
-                    cardId: card.cardId,
-                    kind,
-                    title,
-                    startedAt: Date.now(),
-                  })
-                }
-                card.activeElementId = null
-                card.accumulatedText = ""
-                card.lastFlushedText = ""
+              if (toolCallId) {
+                active.toolCallElements.set(toolCallId, {
+                  elementId: toolElementId,
+                  cardId: card.cardId,
+                  kind,
+                  label,
+                  title,
+                  startedAt: Date.now(),
+                })
               }
+              card.activeElementId = null
+              card.accumulatedText = ""
+              card.lastFlushedText = ""
             }
           }
           break
@@ -138,17 +147,27 @@ export class SessionUpdateHandler {
             if (info) {
               const updatedTitle = newTitle != null ? newTitle : info.title
               const updatedKind = newKind != null ? newKind : info.kind
+              const updatedLabel =
+                newKind != null ? resolveLabelForTitle(newKind, updatedTitle) : info.label
               if (status === "completed" || status === "failed") {
                 const duration = formatDuration(Date.now() - info.startedAt)
                 const seq = this.streamingCardManager.nextSequenceForCard(active, info.cardId)
                 await this.larkClient.updateCardElement(
                   info.cardId,
                   info.elementId,
-                  buildToolCallElement(info.elementId, updatedTitle, updatedKind, status, duration),
+                  buildToolCallElement(
+                    info.elementId,
+                    updatedTitle,
+                    updatedKind,
+                    status,
+                    duration,
+                    updatedLabel,
+                  ),
                   seq,
                 )
               }
               info.title = updatedTitle
+              info.label = updatedLabel
               if (updatedKind !== undefined) {
                 info.kind = updatedKind
               }

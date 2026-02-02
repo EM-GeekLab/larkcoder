@@ -28,6 +28,7 @@ export type ToolCallElementInfo = {
   elementId: string
   cardId: string
   kind?: string
+  label?: string
   title: string
   startedAt: number
 }
