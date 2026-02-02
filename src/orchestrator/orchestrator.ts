@@ -339,6 +339,17 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)?.availableCommands ?? []
   }
 
+  async setSessionMode(sessionId: string, modeId: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    if (!active) {
+      return
+    }
+    await active.client.setSessionMode({
+      sessionId: active.acpSessionId,
+      modeId,
+    })
+  }
+
   private async ensureAgentSession(session: Session): Promise<void> {
     const existing = this.activeSessions.get(session.id)
     if (existing) {
@@ -403,6 +414,10 @@ export class Orchestrator {
       toolCallElements: new Map(),
       cardSequences: new Map(),
     })
+
+    if (session.isPlanMode) {
+      await this.setSessionMode(session.id, "plan")
+    }
   }
 
   private async handlePermissionRequest(
@@ -613,6 +628,7 @@ export class Orchestrator {
           if (modeId) {
             this.logger.withMetadata({ sessionId, modeId }).trace("Mode update")
             active.currentMode = modeId
+            await this.sessionService.setPlanMode(sessionId, modeId === "plan")
           }
           break
         }

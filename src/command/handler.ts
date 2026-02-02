@@ -122,6 +122,7 @@ export class CommandHandler {
     }
     const newMode = !session.isPlanMode
     await this.sessionService.setPlanMode(session.id, newMode)
+    await this.orchestrator.setSessionMode(session.id, newMode ? "plan" : "default")
     const label = newMode ? "Plan mode enabled" : "Plan mode disabled"
     await this.larkClient.replyMarkdownCard(message.messageId, label)
   }
