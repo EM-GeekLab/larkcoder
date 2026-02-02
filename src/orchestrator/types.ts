@@ -29,6 +29,7 @@ export type ToolCallElementInfo = {
   cardId: string
   kind?: string
   title: string
+  startedAt: number
 }
 
 export type StreamingCard = {

@@ -3,9 +3,9 @@ import type { LarkClient } from "../lark/client.js"
 import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { StreamingCardManager } from "./streamingCardManager.js"
-import type { ActiveSessionLookup, SessionLockFn } from "./types.js"
 import { buildToolCallElement } from "../lark/cards/index.js"
 import { isSessionMode } from "../session/types.js"
+import { formatDuration, type ActiveSessionLookup, type SessionLockFn } from "./types.js"
 
 export class SessionUpdateHandler {
   constructor(
@@ -114,6 +114,7 @@ export class SessionUpdateHandler {
                     cardId: card.cardId,
                     kind,
                     title,
+                    startedAt: Date.now(),
                   })
                 }
                 card.activeElementId = null
@@ -138,11 +139,12 @@ export class SessionUpdateHandler {
               const updatedTitle = newTitle != null ? newTitle : info.title
               const updatedKind = newKind != null ? newKind : info.kind
               if (status === "completed" || status === "failed") {
+                const duration = formatDuration(Date.now() - info.startedAt)
                 const seq = this.streamingCardManager.nextSequenceForCard(active, info.cardId)
                 await this.larkClient.updateCardElement(
                   info.cardId,
                   info.elementId,
-                  buildToolCallElement(info.elementId, updatedTitle, updatedKind, status),
+                  buildToolCallElement(info.elementId, updatedTitle, updatedKind, status, duration),
                   seq,
                 )
               }

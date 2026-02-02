@@ -119,6 +119,7 @@ export function buildToolCallElement(
   title: string,
   kind?: string,
   status?: string,
+  duration?: string,
 ): Record<string, unknown> {
   let textColor: string | undefined
   let iconColor: string
@@ -127,7 +128,7 @@ export function buildToolCallElement(
   if (!status) {
     textColor = undefined
     iconColor = "grey"
-    statusIcon = { token: "right-small-ccm_outlined", color: "light_grey" }
+    statusIcon = { token: "time_outlined", color: "light_grey" }
   } else if (status === "failed") {
     textColor = "grey"
     iconColor = "red"
@@ -137,6 +138,8 @@ export function buildToolCallElement(
     iconColor = "grey"
     statusIcon = { token: "done_outlined", color: "green" }
   }
+
+  const suffixContent = status && duration ? `<font color='grey'>${duration}</font>` : ""
 
   return {
     tag: "column_set",
@@ -157,7 +160,7 @@ export function buildToolCallElement(
         elements: [
           {
             tag: "div",
-            text: { tag: "plain_text", content: "" },
+            text: { tag: "lark_md", content: suffixContent, text_size: "notation" },
             icon: {
               tag: "standard_icon",
               token: statusIcon.token,
