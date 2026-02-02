@@ -3,10 +3,21 @@
 import * as acp from "@agentclientprotocol/sdk"
 import { Readable, Writable } from "node:stream"
 
+const AVAILABLE_MODELS: acp.ModelInfo[] = [
+  { modelId: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
+  { modelId: "claude-opus-4-20250514", name: "Claude Opus 4" },
+  { modelId: "claude-opus-4-5-20251101", name: "Claude Opus 4.5" },
+  { modelId: "claude-haiku-3-5-20241022", name: "Claude Haiku 3.5" },
+  { modelId: "claude-sonnet-3-5-20241022", name: "Claude Sonnet 3.5" },
+]
+
+const DEFAULT_MODEL_ID = AVAILABLE_MODELS[0]!.modelId
+
 interface AgentSession {
   pendingPrompt: AbortController | null
   cwd: string
   systemPrompt?: string
+  currentModel: string
 }
 
 class MockAgent implements acp.Agent {
@@ -37,10 +48,15 @@ class MockAgent implements acp.Agent {
       pendingPrompt: null,
       cwd: params.cwd ?? process.cwd(),
       systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
+      currentModel: DEFAULT_MODEL_ID,
     })
 
     return {
       sessionId,
+      models: {
+        availableModels: AVAILABLE_MODELS,
+        currentModelId: DEFAULT_MODEL_ID,
+      },
     }
   }
 
@@ -54,11 +70,18 @@ class MockAgent implements acp.Agent {
         pendingPrompt: null,
         cwd: params.cwd ?? process.cwd(),
         systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
+        currentModel: DEFAULT_MODEL_ID,
       })
     }
 
-    // ResumeSessionResponse only contains optional _meta
-    return {}
+    const session = this.sessions.get(sessionId)!
+
+    return {
+      models: {
+        availableModels: AVAILABLE_MODELS,
+        currentModelId: session.currentModel,
+      },
+    }
   }
 
   async authenticate(_params: acp.AuthenticateRequest): Promise<acp.AuthenticateResponse | void> {
@@ -67,7 +90,23 @@ class MockAgent implements acp.Agent {
   }
 
   async setSessionMode(_params: acp.SetSessionModeRequest): Promise<acp.SetSessionModeResponse> {
-    // Session mode changes not implemented in this mock
+    return {}
+  }
+
+  async unstable_setSessionModel(
+    params: acp.SetSessionModelRequest,
+  ): Promise<acp.SetSessionModelResponse> {
+    const session = this.sessions.get(params.sessionId)
+
+    if (!session) {
+      throw new Error(`Session ${params.sessionId} not found`)
+    }
+
+    if (!AVAILABLE_MODELS.some((m) => m.modelId === params.modelId)) {
+      throw new Error(`Unknown model: ${params.modelId}`)
+    }
+
+    session.currentModel = params.modelId
     return {}
   }
 

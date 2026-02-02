@@ -180,16 +180,22 @@ export class Orchestrator {
   }
 
   async handleModelSelect(sessionId: string, message: ParsedMessage): Promise<void> {
+    const session = await this.sessionService.getSession(sessionId)
+    await this.ensureAgentSession(session)
+
     const active = this.activeSessions.get(sessionId)
-    const models = [
-      { modelId: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-      {
-        modelId: "claude-opus-4-20250514",
-        label: "Claude Opus 4",
-      },
-      { modelId: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
-    ]
-    const card = buildModelSelectCard({ sessionId, currentModel: active?.currentModel, models })
+    const models = active?.availableModels ?? []
+
+    if (models.length === 0) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No models available.")
+      return
+    }
+
+    const card = buildModelSelectCard({
+      sessionId,
+      currentModel: active?.currentModel,
+      models: models.map((m) => ({ modelId: m.modelId, label: m.name })),
+    })
     await this.larkClient.replyCard(message.messageId, card)
   }
 
@@ -343,14 +349,19 @@ export class Orchestrator {
     await acpClient.initialize()
 
     let acpSessionId: string
+    let modelState: {
+      availableModels: Array<{ modelId: string; name: string }>
+      currentModelId: string
+    } | null = null
 
     if (session.acpSessionId) {
       this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
-      await acpClient.resumeSession({
+      const resumeResponse = await acpClient.resumeSession({
         sessionId: session.acpSessionId,
         cwd: session.workingDir,
       })
       acpSessionId = session.acpSessionId
+      modelState = resumeResponse.models ?? null
     } else {
       this.logger.withMetadata({ sessionId: session.id }).debug("Creating new ACP session")
       const sessionResponse = await acpClient.newSession({
@@ -359,6 +370,7 @@ export class Orchestrator {
         _meta: systemPrompt ? { systemPrompt } : undefined,
       })
       acpSessionId = sessionResponse.sessionId
+      modelState = sessionResponse.models ?? null
       await this.sessionService.setAcpSessionId(session.id, acpSessionId)
     }
 
@@ -367,7 +379,9 @@ export class Orchestrator {
       client: acpClient,
       acpSessionId,
       availableCommands: [],
+      availableModels: modelState?.availableModels ?? [],
       currentMode: "",
+      currentModel: modelState?.currentModelId,
       permissionResolvers: new Map(),
       toolCallElements: new Map(),
       cardSequences: new Map(),
