@@ -2,7 +2,6 @@ import type { LarkClient } from "../lark/client.js"
 import type { ParsedMessage } from "../lark/types.js"
 import type { Orchestrator } from "../orchestrator/orchestrator.js"
 import type { SessionService } from "../session/service.js"
-import type { SessionMode } from "../session/types.js"
 import type { Logger } from "../utils/logger.js"
 import type { ParsedCommand } from "./parser.js"
 
@@ -22,22 +21,6 @@ const LOCAL_COMMANDS = new Set([
   "help",
 ])
 
-const MODE_MAP: Record<string, SessionMode> = {
-  default: "default",
-  "accept-edits": "acceptEdits",
-  plan: "plan",
-  "dont-ask": "dontAsk",
-  bypass: "bypassPermissions",
-}
-
-export const MODE_DISPLAY: Record<string, string> = {
-  default: "Default",
-  acceptEdits: "Accept Edits",
-  plan: "Plan",
-  dontAsk: "Don't Ask",
-  bypassPermissions: "Bypass Permissions ⚡",
-}
-
 const HELP_TEXT = `Available commands:
 /help — Show this help message
 /new [prompt] — Create a new session (with optional initial prompt)
@@ -48,7 +31,7 @@ const HELP_TEXT = `Available commands:
 /stop — Stop the running agent
 /plan — Toggle plan mode
 /solo — Toggle solo mode (bypass all permissions)
-/mode [name] — Show or switch mode (default, accept-edits, plan, dont-ask, bypass)
+/mode [name] — Show or switch mode (use /mode to see available modes)
 /info — Show current session info
 /model — Select model`
 
@@ -147,7 +130,8 @@ export class CommandHandler {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
-    const newMode = session.mode === "plan" ? "default" : "plan"
+    const currentMode = this.orchestrator.getCurrentMode(session.id) ?? session.mode
+    const newMode = currentMode === "plan" ? "default" : "plan"
     await this.switchMode(session.id, newMode, message.messageId)
   }
 
@@ -157,7 +141,8 @@ export class CommandHandler {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
-    const newMode = session.mode === "bypassPermissions" ? "default" : "bypassPermissions"
+    const currentMode = this.orchestrator.getCurrentMode(session.id) ?? session.mode
+    const newMode = currentMode === "bypassPermissions" ? "default" : "bypassPermissions"
     await this.switchMode(session.id, newMode, message.messageId)
   }
 
@@ -171,22 +156,24 @@ export class CommandHandler {
       await this.orchestrator.handleModeSelect(session.id, message)
       return
     }
-    const modeId = MODE_MAP[args]
-    if (!modeId) {
-      const available = Object.keys(MODE_MAP).join(", ")
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        `Unknown mode: ${args}\nAvailable: ${available}`,
-      )
+    const modes = this.orchestrator.getAvailableModes(session.id)
+    const matched = modes.find((m) => m.id === args || m.name.toLowerCase() === args.toLowerCase())
+    if (!matched) {
+      const available = modes.map((m) => m.id).join(", ")
+      const hint = available
+        ? `Available: ${available}`
+        : "No modes available. Send a message first to initialize the session."
+      await this.larkClient.replyMarkdownCard(message.messageId, `Unknown mode: ${args}\n${hint}`)
       return
     }
-    await this.switchMode(session.id, modeId, message.messageId)
+    await this.switchMode(session.id, matched.id, message.messageId)
   }
 
-  private async switchMode(sessionId: string, modeId: SessionMode, replyTo: string): Promise<void> {
+  private async switchMode(sessionId: string, modeId: string, replyTo: string): Promise<void> {
     await this.sessionService.setMode(sessionId, modeId)
     await this.orchestrator.setSessionMode(sessionId, modeId)
-    const display = MODE_DISPLAY[modeId] ?? modeId
+    const modes = this.orchestrator.getAvailableModes(sessionId)
+    const display = modes.find((m) => m.id === modeId)?.name ?? modeId
     await this.larkClient.replyMarkdownCard(replyTo, `Mode: ${display}`)
   }
 
@@ -197,11 +184,14 @@ export class CommandHandler {
       return
     }
 
+    const modes = this.orchestrator.getAvailableModes(session.id)
+    const modeDisplay = modes.find((m) => m.id === session.mode)?.name ?? session.mode
+
     const lines = [
       `Session: ${session.id}`,
       `Status: ${session.status}`,
       `Prompt: ${session.initialPrompt.slice(0, 100)}`,
-      `Mode: ${MODE_DISPLAY[session.mode] ?? session.mode}`,
+      `Mode: ${modeDisplay}`,
       `Created: ${session.createdAt}`,
     ]
 

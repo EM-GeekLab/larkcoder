@@ -1,6 +1,6 @@
 import { desc, eq, lt } from "drizzle-orm"
 import type { DrizzleDB } from "./db.js"
-import type { CreateSessionParams, Session, SessionMode, SessionStatus } from "./types.js"
+import type { CreateSessionParams, Session, SessionStatus } from "./types.js"
 import { processedEvents, sessions } from "./schema.js"
 
 function rowToSession(row: typeof sessions.$inferSelect): Session {
@@ -113,7 +113,7 @@ export class SessionRepository {
     await this.db.update(sessions).set({ initialPrompt, updatedAt: now }).where(eq(sessions.id, id))
   }
 
-  async updateMode(id: string, mode: SessionMode): Promise<void> {
+  async updateMode(id: string, mode: string): Promise<void> {
     const now = new Date().toISOString()
     await this.db.update(sessions).set({ mode, updatedAt: now }).where(eq(sessions.id, id))
   }

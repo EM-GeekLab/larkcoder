@@ -56,6 +56,7 @@ export type ActiveSession = {
   acpSessionId: string
   availableCommands: string[]
   availableModels: acp.ModelInfo[]
+  availableModes: acp.SessionMode[]
   currentMode: string
   currentModel?: string
   streamingCard?: StreamingCard

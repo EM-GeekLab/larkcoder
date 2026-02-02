@@ -13,11 +13,26 @@ const AVAILABLE_MODELS: acp.ModelInfo[] = [
 
 const DEFAULT_MODEL_ID = AVAILABLE_MODELS[0]!.modelId
 
+const AVAILABLE_MODES: acp.SessionMode[] = [
+  { id: "default", name: "Default", description: "Normal mode with standard permissions" },
+  { id: "acceptEdits", name: "Accept Edits", description: "Auto-accept file edits" },
+  { id: "plan", name: "Plan", description: "Plan mode for reviewing before executing" },
+  { id: "dontAsk", name: "Don't Ask", description: "Skip confirmation prompts" },
+  {
+    id: "bypassPermissions",
+    name: "Bypass Permissions ⚡",
+    description: "Bypass all permission checks",
+  },
+]
+
+const DEFAULT_MODE_ID = AVAILABLE_MODES[0]!.id
+
 interface AgentSession {
   pendingPrompt: AbortController | null
   cwd: string
   systemPrompt?: string
   currentModel: string
+  currentMode: string
 }
 
 class MockAgent implements acp.Agent {
@@ -49,6 +64,7 @@ class MockAgent implements acp.Agent {
       cwd: params.cwd ?? process.cwd(),
       systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
       currentModel: DEFAULT_MODEL_ID,
+      currentMode: DEFAULT_MODE_ID,
     })
 
     return {
@@ -56,6 +72,10 @@ class MockAgent implements acp.Agent {
       models: {
         availableModels: AVAILABLE_MODELS,
         currentModelId: DEFAULT_MODEL_ID,
+      },
+      modes: {
+        availableModes: AVAILABLE_MODES,
+        currentModeId: DEFAULT_MODE_ID,
       },
     }
   }
@@ -71,6 +91,7 @@ class MockAgent implements acp.Agent {
         cwd: params.cwd ?? process.cwd(),
         systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
         currentModel: DEFAULT_MODEL_ID,
+        currentMode: DEFAULT_MODE_ID,
       })
     }
 
@@ -81,6 +102,10 @@ class MockAgent implements acp.Agent {
         availableModels: AVAILABLE_MODELS,
         currentModelId: session.currentModel,
       },
+      modes: {
+        availableModes: AVAILABLE_MODES,
+        currentModeId: session.currentMode,
+      },
     }
   }
 
@@ -89,7 +114,26 @@ class MockAgent implements acp.Agent {
     return {}
   }
 
-  async setSessionMode(_params: acp.SetSessionModeRequest): Promise<acp.SetSessionModeResponse> {
+  async setSessionMode(params: acp.SetSessionModeRequest): Promise<acp.SetSessionModeResponse> {
+    const session = this.sessions.get(params.sessionId)
+    if (!session) {
+      throw new Error(`Session ${params.sessionId} not found`)
+    }
+
+    if (!AVAILABLE_MODES.some((m) => m.id === params.modeId)) {
+      throw new Error(`Unknown mode: ${params.modeId}`)
+    }
+
+    session.currentMode = params.modeId
+
+    await this.connection.sessionUpdate({
+      sessionId: params.sessionId,
+      update: {
+        sessionUpdate: "current_mode_update",
+        currentModeId: params.modeId,
+      },
+    })
+
     return {}
   }
 

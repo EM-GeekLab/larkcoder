@@ -4,7 +4,6 @@ import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { StreamingCardManager } from "./streamingCardManager.js"
 import { buildToolCallElement } from "../lark/cards/index.js"
-import { isSessionMode } from "../session/types.js"
 import { extractToolCallDisplay, resolveLabelForTitle } from "./toolCallDisplay.js"
 import { formatDuration, type ActiveSessionLookup, type SessionLockFn } from "./types.js"
 
@@ -54,7 +53,7 @@ export class SessionUpdateHandler {
         }
         case "current_mode_update": {
           const modeId = (update as Record<string, unknown>).currentModeId as string | undefined
-          if (modeId && isSessionMode(modeId)) {
+          if (modeId) {
             this.logger.withMetadata({ sessionId, modeId }).trace("Mode update")
             active.currentMode = modeId
             await this.sessionService.setMode(sessionId, modeId)

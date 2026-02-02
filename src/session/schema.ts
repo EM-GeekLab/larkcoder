@@ -17,11 +17,7 @@ export const sessions = sqliteTable(
     docToken: text("doc_token"),
     /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
     workingMessageId: text("working_message_id"),
-    mode: text("mode", {
-      enum: ["default", "acceptEdits", "plan", "dontAsk", "bypassPermissions"],
-    })
-      .notNull()
-      .default("default"),
+    mode: text("mode").notNull().default("default"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },

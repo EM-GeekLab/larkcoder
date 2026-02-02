@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { Logger } from "../utils/logger.js"
 import type { SessionRepository } from "./repository.js"
-import type { CreateSessionParams, Session, SessionMode, SessionStatus } from "./types.js"
+import type { CreateSessionParams, Session, SessionStatus } from "./types.js"
 import { SessionNotFoundError, SessionStateError } from "../utils/errors.js"
 
 const validTransitions: Record<SessionStatus, SessionStatus[]> = {
@@ -86,7 +86,7 @@ export class SessionService {
     await this.repo.updateInitialPrompt(id, initialPrompt)
   }
 
-  async setMode(id: string, mode: SessionMode): Promise<void> {
+  async setMode(id: string, mode: string): Promise<void> {
     await this.repo.updateMode(id, mode)
   }
 

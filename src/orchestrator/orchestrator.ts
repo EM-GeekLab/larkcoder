@@ -9,7 +9,7 @@ import type { Session } from "../session/types.js"
 import type { Logger } from "../utils/logger.js"
 import type { ActiveSession } from "./types.js"
 import { createAcpClient } from "../agent/acpClient.js"
-import { CommandHandler, MODE_DISPLAY } from "../command/handler.js"
+import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
   buildModeSelectCard,
@@ -201,8 +201,21 @@ export class Orchestrator {
 
   async handleModeSelect(sessionId: string, message: ParsedMessage): Promise<void> {
     const session = await this.sessionService.getSession(sessionId)
-    const modes = Object.entries(MODE_DISPLAY).map(([modeId, label]) => ({ modeId, label }))
-    const card = buildModeSelectCard({ sessionId, currentMode: session.mode, modes })
+    await this.ensureAgentSession(session)
+
+    const active = this.activeSessions.get(sessionId)
+    const modes = active?.availableModes ?? []
+
+    if (modes.length === 0) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No modes available.")
+      return
+    }
+
+    const card = buildModeSelectCard({
+      sessionId,
+      currentMode: active?.currentMode ?? session.mode,
+      modes: modes.map((m) => ({ modeId: m.id, label: m.name })),
+    })
     await this.larkClient.replyCard(message.messageId, card)
   }
 
@@ -306,6 +319,14 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)?.availableCommands ?? []
   }
 
+  getAvailableModes(sessionId: string): Array<{ id: string; name: string }> {
+    return this.activeSessions.get(sessionId)?.availableModes ?? []
+  }
+
+  getCurrentMode(sessionId: string): string | undefined {
+    return this.activeSessions.get(sessionId)?.currentMode
+  }
+
   async setSessionMode(sessionId: string, modeId: string): Promise<void> {
     const active = this.activeSessions.get(sessionId)
     if (!active) {
@@ -353,6 +374,10 @@ export class Orchestrator {
       availableModels: Array<{ modelId: string; name: string }>
       currentModelId: string
     } | null = null
+    let modeState: {
+      availableModes: Array<{ id: string; name: string; description?: string | null }>
+      currentModeId: string
+    } | null = null
 
     if (session.acpSessionId) {
       this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
@@ -362,6 +387,7 @@ export class Orchestrator {
       })
       acpSessionId = session.acpSessionId
       modelState = resumeResponse.models ?? null
+      modeState = resumeResponse.modes ?? null
     } else {
       this.logger.withMetadata({ sessionId: session.id }).debug("Creating new ACP session")
       const sessionResponse = await acpClient.newSession({
@@ -371,6 +397,7 @@ export class Orchestrator {
       })
       acpSessionId = sessionResponse.sessionId
       modelState = sessionResponse.models ?? null
+      modeState = sessionResponse.modes ?? null
       await this.sessionService.setAcpSessionId(session.id, acpSessionId)
     }
 
@@ -380,7 +407,8 @@ export class Orchestrator {
       acpSessionId,
       availableCommands: [],
       availableModels: modelState?.availableModels ?? [],
-      currentMode: "",
+      availableModes: modeState?.availableModes ?? [],
+      currentMode: modeState?.currentModeId ?? session.mode,
       currentModel: modelState?.currentModelId,
       permissionResolvers: new Map(),
       toolCallElements: new Map(),

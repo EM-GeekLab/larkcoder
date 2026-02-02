@@ -5,9 +5,7 @@ import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { PermissionManager } from "./permissionManager.js"
 import type { ActiveSessionLookup } from "./types.js"
-import { MODE_DISPLAY } from "../command/handler.js"
 import { buildSelectedCard } from "../lark/cards/index.js"
-import { isSessionMode, type SessionMode } from "../session/types.js"
 
 export class CardActionHandler {
   constructor(
@@ -46,7 +44,7 @@ export class CardActionHandler {
         break
 
       case "mode_select":
-        if (action.sessionId && action.modeId && isSessionMode(action.modeId)) {
+        if (action.sessionId && action.modeId) {
           await this.handleModeSelectAction(action.sessionId, action.modeId, action.openMessageId)
         }
         break
@@ -103,7 +101,7 @@ export class CardActionHandler {
 
   private async handleModeSelectAction(
     sessionId: string,
-    modeId: SessionMode,
+    modeId: string,
     cardMessageId: string,
   ): Promise<void> {
     await this.sessionService.setMode(sessionId, modeId)
@@ -113,8 +111,9 @@ export class CardActionHandler {
         sessionId: active.acpSessionId,
         modeId,
       })
+      active.currentMode = modeId
     }
-    const display = MODE_DISPLAY[modeId] ?? modeId
+    const display = active?.availableModes.find((m) => m.id === modeId)?.name ?? modeId
     await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Mode: ${display}`))
   }
 
