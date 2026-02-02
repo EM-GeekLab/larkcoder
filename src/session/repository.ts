@@ -12,7 +12,6 @@ function rowToSession(row: typeof sessions.$inferSelect): Session {
     status: row.status as SessionStatus,
     initialPrompt: row.initialPrompt,
     acpSessionId: row.acpSessionId ?? undefined,
-    processPort: row.processPort ?? undefined,
     workingDir: row.workingDir,
     docToken: row.docToken ?? undefined,
     workingMessageId: row.workingMessageId ?? undefined,

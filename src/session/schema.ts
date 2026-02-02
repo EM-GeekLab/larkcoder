@@ -10,9 +10,10 @@ export const sessions = sqliteTable(
     status: text("status").notNull().default("idle"),
     initialPrompt: text("initial_prompt").notNull(),
     acpSessionId: text("acp_session_id"),
-    processPort: integer("process_port"),
     workingDir: text("working_dir").notNull(),
+    /** 飞书文档 token，用于注入 system prompt 上下文及 agent 读写文档 */
     docToken: text("doc_token"),
+    /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
     workingMessageId: text("working_message_id"),
     isPlanMode: integer("is_plan_mode", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull(),

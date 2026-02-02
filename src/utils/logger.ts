@@ -17,7 +17,7 @@ export function createLogger(options?: { prefix?: string }): Logger {
 
   let newLogger = logger.child()
   if (prefix) {
-    newLogger = newLogger.withPrefix(prefix)
+    newLogger = newLogger.withPrefix(`[${prefix}]`)
   }
   return newLogger
 }

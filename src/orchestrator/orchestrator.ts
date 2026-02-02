@@ -503,7 +503,8 @@ export class Orchestrator {
         cardMessageId,
         buildSelectedCard(`Resumed session: ${label}`),
       )
-    } catch {
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).warn(`Session not found: ${sessionId}`)
       await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }
   }
@@ -549,7 +550,8 @@ export class Orchestrator {
         cardMessageId,
         buildSelectedCard(`Deleted session: ${label}`),
       )
-    } catch {
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).warn(`Session not found for deletion: ${sessionId}`)
       await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }
   }
@@ -595,6 +597,9 @@ export class Orchestrator {
             | undefined
           const text = content?.text as string | undefined
           if (text) {
+            this.logger
+              .withMetadata({ sessionId, textLength: text.length })
+              .trace("Agent message chunk")
             await this.ensureStreamingCard(sessionId)
             if (active.streamingCard) {
               active.streamingCard.accumulatedText += text
@@ -606,6 +611,7 @@ export class Orchestrator {
         case "current_mode_update": {
           const modeId = (update as Record<string, unknown>).currentModeId as string | undefined
           if (modeId) {
+            this.logger.withMetadata({ sessionId, modeId }).trace("Mode update")
             active.currentMode = modeId
           }
           break
@@ -621,7 +627,9 @@ export class Orchestrator {
           const title = (update as Record<string, unknown>).title as string | undefined
           const kind = (update as Record<string, unknown>).kind as string | undefined
           const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
-          this.logger.withMetadata({ sessionId, tool: title, kind }).debug("Agent tool call")
+          this.logger
+            .withMetadata({ sessionId, toolCallId, tool: title, kind })
+            .debug("Agent tool call")
           if (title) {
             // Check if this tool call already has an element — update in-place
             const existing = toolCallId ? active.toolCallElements.get(toolCallId) : undefined
@@ -680,7 +688,7 @@ export class Orchestrator {
           const newTitle = (update as Record<string, unknown>).title as string | undefined | null
           const newKind = (update as Record<string, unknown>).kind as string | undefined | null
           this.logger
-            .withMetadata({ sessionId, toolCallId, status })
+            .withMetadata({ sessionId, toolCallId, status, title: newTitle, kind: newKind })
             .debug("Agent tool call update")
           if (toolCallId) {
             const info = active.toolCallElements.get(toolCallId)

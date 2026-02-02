@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9adc1238-fa46-4de2-bb93-c1a49d691b75",
+  "id": "3b43e967-0835-4bc4-bd8e-aedeb70ea864",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "processed_events": {
@@ -81,13 +81,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "process_port": {
-          "name": "process_port",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "working_dir": {
           "name": "working_dir",
           "type": "text",
@@ -135,17 +128,23 @@
       "indexes": {
         "idx_sessions_chat_id": {
           "name": "idx_sessions_chat_id",
-          "columns": ["chat_id"],
+          "columns": [
+            "chat_id"
+          ],
           "isUnique": false
         },
         "idx_sessions_thread_id": {
           "name": "idx_sessions_thread_id",
-          "columns": ["thread_id"],
+          "columns": [
+            "thread_id"
+          ],
           "isUnique": false
         },
         "idx_sessions_status": {
           "name": "idx_sessions_status",
-          "columns": ["status"],
+          "columns": [
+            "status"
+          ],
           "isUnique": false
         }
       },

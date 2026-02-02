@@ -77,6 +77,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error("Fatal error:", error)
+  const logger = createLogger({ prefix: "larkcoder" })
+  logger.withError(error as Error).error("Fatal error")
   process.exit(1)
 })

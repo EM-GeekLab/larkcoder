@@ -25,7 +25,6 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "loglayer": "^8.4.0",
-    "radashi": "^12.7.1",
     "serialize-error": "^13.0.1",
     "yaml": "^2.5.1",
     "zod": "^4.3.6"

@@ -51,7 +51,7 @@ export class ProcessManager {
     this.processes.set(sessionId, { process: child })
 
     child.stderr?.on("data", (data: Buffer) => {
-      this.logger.warn(`[agent:${sessionId}:stderr] ${data.toString().trim()}`)
+      this.logger.debug(`[agent:${sessionId}:stderr] ${data.toString().trim()}`)
     })
 
     child.on("exit", (code, signal) => {

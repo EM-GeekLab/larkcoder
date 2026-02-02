@@ -1,6 +1,6 @@
 import * as Lark from "@larksuiteoapi/node-sdk"
 import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
+import { type Logger, createLarkLogger } from "../utils/logger.js"
 import type { CardAction, ParsedMessage } from "./types.js"
 
 export type MessageHandler = (message: ParsedMessage) => Promise<void>
@@ -21,7 +21,10 @@ export class LarkEventHandler {
   }
 
   createEventDispatcher(sessionService: SessionService): Lark.EventDispatcher {
-    return new Lark.EventDispatcher({}).register({
+    return new Lark.EventDispatcher({
+      logger: createLarkLogger("lark-event"),
+      loggerLevel: Lark.LoggerLevel.error,
+    }).register({
       "im.message.receive_v1": async (data: Record<string, unknown>) => {
         const header = data.header as Record<string, unknown> | undefined
         const eventId = (header?.event_id ?? (data as Record<string, unknown>).event_id) as
@@ -46,9 +49,12 @@ export class LarkEventHandler {
               chatType: message.chatType,
               senderId: message.senderId,
               threadId: message.rootId,
-              text: message.text,
             })
             .info("Received message")
+
+          this.logger
+            .withMetadata({ messageId: message.messageId, textLength: message.text.length })
+            .debug("Message content")
 
           if (this.messageHandler) {
             // Fire-and-forget: must return within 3 seconds

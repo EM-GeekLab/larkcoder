@@ -3,6 +3,7 @@
   "endOfLine": "lf",
   "printWidth": 100,
   "semi": false,
+  "ignorePatterns": ["drizzle/**"],
   "experimentalSortImports": {
     "order": "asc",
     "sortSideEffects": true,
