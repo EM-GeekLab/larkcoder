@@ -23,4 +23,6 @@ export type CardAction = {
   optionId?: string
   modelId?: string
   modeId?: string
+  configId?: string
+  configValue?: string
 }

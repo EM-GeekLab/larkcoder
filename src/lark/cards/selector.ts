@@ -98,3 +98,94 @@ export function buildModeSelectCard(data: ModeSelectCardData): Record<string, un
     })),
   )
 }
+
+type ConfigOption = {
+  id: string
+  name: string
+  currentValue: string
+  options:
+    | Array<{ value: string; name: string }>
+    | Array<{ group: string; name: string; options: Array<{ value: string; name: string }> }>
+}
+
+type ConfigSelectCardData = {
+  sessionId: string
+  configOptions: ConfigOption[]
+}
+
+function resolveCurrentValueName(option: ConfigOption): string {
+  for (const item of option.options) {
+    if ("group" in item) {
+      const found = item.options.find((o) => o.value === option.currentValue)
+      if (found) {
+        return found.name
+      }
+    } else if (item.value === option.currentValue) {
+      return item.name
+    }
+  }
+  return option.currentValue
+}
+
+export function buildConfigSelectCard(data: ConfigSelectCardData): Record<string, unknown> {
+  if (data.configOptions.length === 1) {
+    return buildConfigValueSelectCard({
+      sessionId: data.sessionId,
+      configId: data.configOptions[0]!.id,
+      configName: data.configOptions[0]!.name,
+      currentValue: data.configOptions[0]!.currentValue,
+      options: data.configOptions[0]!.options,
+    })
+  }
+
+  return buildSelectorCard(
+    data.configOptions.map((c) => ({
+      label: `${c.name}: **${resolveCurrentValueName(c)}**`,
+      callbackValue: { action: "config_detail", session_id: data.sessionId, config_id: c.id },
+    })),
+  )
+}
+
+type ConfigValueSelectCardData = {
+  sessionId: string
+  configId: string
+  configName: string
+  currentValue: string
+  options: ConfigOption["options"]
+}
+
+export function buildConfigValueSelectCard(
+  data: ConfigValueSelectCardData,
+): Record<string, unknown> {
+  const items: SelectorItem[] = []
+
+  for (const item of data.options) {
+    if ("group" in item) {
+      for (const opt of item.options) {
+        items.push({
+          label: `${item.name} / ${opt.name}`,
+          isCurrent: opt.value === data.currentValue,
+          callbackValue: {
+            action: "config_select",
+            session_id: data.sessionId,
+            config_id: data.configId,
+            config_value: opt.value,
+          },
+        })
+      }
+    } else {
+      items.push({
+        label: item.name,
+        isCurrent: item.value === data.currentValue,
+        callbackValue: {
+          action: "config_select",
+          session_id: data.sessionId,
+          config_id: data.configId,
+          config_value: item.value,
+        },
+      })
+    }
+  }
+
+  return buildSelectorCard(items)
+}

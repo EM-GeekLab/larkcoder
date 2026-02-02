@@ -5,7 +5,7 @@ import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
 import type { PermissionManager } from "./permissionManager.js"
 import type { ActiveSessionLookup } from "./types.js"
-import { buildSelectedCard } from "../lark/cards/index.js"
+import { buildConfigValueSelectCard, buildSelectedCard } from "../lark/cards/index.js"
 
 export class CardActionHandler {
   constructor(
@@ -46,6 +46,27 @@ export class CardActionHandler {
       case "mode_select":
         if (action.sessionId && action.modeId) {
           await this.handleModeSelectAction(action.sessionId, action.modeId, action.openMessageId)
+        }
+        break
+
+      case "config_detail":
+        if (action.sessionId && action.configId) {
+          await this.handleConfigDetailAction(
+            action.sessionId,
+            action.configId,
+            action.openMessageId,
+          )
+        }
+        break
+
+      case "config_select":
+        if (action.sessionId && action.configId && action.configValue) {
+          await this.handleConfigSelectAction(
+            action.sessionId,
+            action.configId,
+            action.configValue,
+            action.openMessageId,
+          )
         }
         break
 
@@ -115,6 +136,55 @@ export class CardActionHandler {
     }
     const display = active?.availableModes.find((m) => m.id === modeId)?.name ?? modeId
     await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Mode: ${display}`))
+  }
+
+  private async handleConfigDetailAction(
+    sessionId: string,
+    configId: string,
+    cardMessageId: string,
+  ): Promise<void> {
+    const active = this.getActiveSession(sessionId)
+    const config = active?.configOptions?.find((c) => c.id === configId)
+    if (!config) {
+      await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Config option not found."))
+      return
+    }
+
+    const card = buildConfigValueSelectCard({
+      sessionId,
+      configId: config.id,
+      configName: config.name,
+      currentValue: config.currentValue,
+      options: config.options,
+    })
+    await this.larkClient.updateCard(cardMessageId, card)
+  }
+
+  private async handleConfigSelectAction(
+    sessionId: string,
+    configId: string,
+    value: string,
+    cardMessageId: string,
+  ): Promise<void> {
+    const active = this.getActiveSession(sessionId)
+    if (active) {
+      try {
+        const result = (await active.client.setSessionConfigOption({
+          sessionId: active.acpSessionId,
+          configId,
+          value,
+        })) as { configOptions?: unknown[] }
+
+        if (result.configOptions) {
+          active.configOptions = result.configOptions as typeof active.configOptions
+        }
+      } catch (error: unknown) {
+        this.logger.withError(error as Error).error("Failed to set config option")
+      }
+    }
+
+    const configName = active?.configOptions?.find((c) => c.id === configId)?.name ?? configId
+    await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`${configName}: ${value}`))
   }
 
   private async handleSessionDeleteAction(sessionId: string, cardMessageId: string): Promise<void> {

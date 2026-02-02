@@ -9,6 +9,11 @@ export type AgentClient = {
   cancel(params: acp.CancelNotification): Promise<void>
   setSessionMode(params: acp.SetSessionModeRequest): Promise<acp.SetSessionModeResponse>
   setSessionModel(params: { sessionId: string; modelId: string }): Promise<unknown>
+  setSessionConfigOption(params: {
+    sessionId: string
+    configId: string
+    value: string
+  }): Promise<unknown>
   readonly signal: AbortSignal
   readonly closed: Promise<void>
 }

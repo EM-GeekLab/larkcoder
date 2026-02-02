@@ -1,3 +1,4 @@
+import type * as acp from "@agentclientprotocol/sdk"
 import type { ProcessManager } from "../agent/processManager.js"
 import type { AgentClient } from "../agent/types.js"
 import type { AppConfig } from "../config/schema.js"
@@ -12,6 +13,7 @@ import { createAcpClient } from "../agent/acpClient.js"
 import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
+  buildConfigSelectCard,
   buildModeSelectCard,
   buildModelSelectCard,
   buildSessionDeleteCard,
@@ -338,6 +340,42 @@ export class Orchestrator {
     })
   }
 
+  async handleConfigSelect(sessionId: string, message: ParsedMessage): Promise<void> {
+    const session = await this.sessionService.getSession(sessionId)
+    await this.ensureAgentSession(session)
+
+    const active = this.activeSessions.get(sessionId)
+    const configOptions = active?.configOptions ?? []
+
+    if (configOptions.length === 0) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No config options available.")
+      return
+    }
+
+    const card = buildConfigSelectCard({ sessionId, configOptions })
+    await this.larkClient.replyCard(message.messageId, card)
+  }
+
+  async setSessionConfigOption(sessionId: string, configId: string, value: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    if (!active) {
+      return
+    }
+    const result = (await active.client.setSessionConfigOption({
+      sessionId: active.acpSessionId,
+      configId,
+      value,
+    })) as { configOptions?: acp.SessionConfigOption[] }
+
+    if (result.configOptions) {
+      active.configOptions = result.configOptions
+    }
+  }
+
+  getConfigOptions(sessionId: string): acp.SessionConfigOption[] {
+    return this.activeSessions.get(sessionId)?.configOptions ?? []
+  }
+
   private async ensureAgentSession(session: Session): Promise<void> {
     const existing = this.activeSessions.get(session.id)
     if (existing) {
@@ -378,6 +416,7 @@ export class Orchestrator {
       availableModes: Array<{ id: string; name: string; description?: string | null }>
       currentModeId: string
     } | null = null
+    let configOptions: acp.SessionConfigOption[] | null = null
 
     if (session.acpSessionId) {
       this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
@@ -388,6 +427,7 @@ export class Orchestrator {
       acpSessionId = session.acpSessionId
       modelState = resumeResponse.models ?? null
       modeState = resumeResponse.modes ?? null
+      configOptions = resumeResponse.configOptions ?? null
     } else {
       this.logger.withMetadata({ sessionId: session.id }).debug("Creating new ACP session")
       const sessionResponse = await acpClient.newSession({
@@ -398,6 +438,7 @@ export class Orchestrator {
       acpSessionId = sessionResponse.sessionId
       modelState = sessionResponse.models ?? null
       modeState = sessionResponse.modes ?? null
+      configOptions = sessionResponse.configOptions ?? null
       await this.sessionService.setAcpSessionId(session.id, acpSessionId)
     }
 
@@ -410,6 +451,7 @@ export class Orchestrator {
       availableModes: modeState?.availableModes ?? [],
       currentMode: modeState?.currentModeId ?? session.mode,
       currentModel: modelState?.currentModelId,
+      configOptions: configOptions ?? undefined,
       permissionResolvers: new Map(),
       toolCallElements: new Map(),
       cardSequences: new Map(),

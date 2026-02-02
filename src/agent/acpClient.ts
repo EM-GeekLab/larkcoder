@@ -72,6 +72,13 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
         (connection as unknown as Record<string, Function>).unstable_setSessionModel?.(params) ?? {}
       )
     },
+    async setSessionConfigOption(params: { sessionId: string; configId: string; value: string }) {
+      return (
+        (connection as unknown as Record<string, Function>).unstable_setSessionConfigOption?.(
+          params,
+        ) ?? {}
+      )
+    },
     get signal() {
       return connection.signal
     },

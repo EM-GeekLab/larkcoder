@@ -27,12 +27,32 @@ const AVAILABLE_MODES: acp.SessionMode[] = [
 
 const DEFAULT_MODE_ID = AVAILABLE_MODES[0]!.id
 
+const DEFAULT_THOUGHT_LEVEL = "concise"
+
+function buildConfigOptions(thoughtLevel: string): acp.SessionConfigOption[] {
+  return [
+    {
+      type: "select",
+      id: "thought_level",
+      name: "Thought Level",
+      category: "thought_level",
+      currentValue: thoughtLevel,
+      options: [
+        { value: "none", name: "None", description: "No thinking output" },
+        { value: "concise", name: "Concise", description: "Brief thought summaries" },
+        { value: "verbose", name: "Verbose", description: "Detailed thinking output" },
+      ],
+    },
+  ]
+}
+
 interface AgentSession {
   pendingPrompt: AbortController | null
   cwd: string
   systemPrompt?: string
   currentModel: string
   currentMode: string
+  currentThoughtLevel: string
 }
 
 class MockAgent implements acp.Agent {
@@ -65,6 +85,7 @@ class MockAgent implements acp.Agent {
       systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
       currentModel: DEFAULT_MODEL_ID,
       currentMode: DEFAULT_MODE_ID,
+      currentThoughtLevel: DEFAULT_THOUGHT_LEVEL,
     })
 
     return {
@@ -77,6 +98,7 @@ class MockAgent implements acp.Agent {
         availableModes: AVAILABLE_MODES,
         currentModeId: DEFAULT_MODE_ID,
       },
+      configOptions: buildConfigOptions(DEFAULT_THOUGHT_LEVEL),
     }
   }
 
@@ -92,6 +114,7 @@ class MockAgent implements acp.Agent {
         systemPrompt: (params._meta as { systemPrompt?: string } | undefined)?.systemPrompt,
         currentModel: DEFAULT_MODEL_ID,
         currentMode: DEFAULT_MODE_ID,
+        currentThoughtLevel: DEFAULT_THOUGHT_LEVEL,
       })
     }
 
@@ -106,6 +129,7 @@ class MockAgent implements acp.Agent {
         availableModes: AVAILABLE_MODES,
         currentModeId: session.currentMode,
       },
+      configOptions: buildConfigOptions(session.currentThoughtLevel),
     }
   }
 
@@ -135,6 +159,37 @@ class MockAgent implements acp.Agent {
     })
 
     return {}
+  }
+
+  async unstable_setSessionConfigOption(
+    params: acp.SetSessionConfigOptionRequest,
+  ): Promise<acp.SetSessionConfigOptionResponse> {
+    const session = this.sessions.get(params.sessionId)
+    if (!session) {
+      throw new Error(`Session ${params.sessionId} not found`)
+    }
+
+    if (params.configId === "thought_level") {
+      const validValues = ["none", "concise", "verbose"]
+      if (!validValues.includes(params.value)) {
+        throw new Error(`Invalid value for thought_level: ${params.value}`)
+      }
+      session.currentThoughtLevel = params.value
+    } else {
+      throw new Error(`Unknown config option: ${params.configId}`)
+    }
+
+    const configOptions = buildConfigOptions(session.currentThoughtLevel)
+
+    await this.connection.sessionUpdate({
+      sessionId: params.sessionId,
+      update: {
+        sessionUpdate: "config_option_update",
+        configOptions,
+      },
+    })
+
+    return { configOptions }
   }
 
   async unstable_setSessionModel(

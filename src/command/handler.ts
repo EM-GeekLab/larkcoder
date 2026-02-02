@@ -18,6 +18,7 @@ const LOCAL_COMMANDS = new Set([
   "mode",
   "info",
   "model",
+  "config",
   "help",
 ])
 
@@ -33,7 +34,8 @@ const HELP_TEXT = `Available commands:
 /solo — Toggle solo mode (bypass all permissions)
 /mode [name] — Show or switch mode (use /mode to see available modes)
 /info — Show current session info
-/model — Select model`
+/model — Select model
+/config — Show and change config options`
 
 export class CommandHandler {
   constructor(
@@ -98,6 +100,10 @@ export class CommandHandler {
 
       case "model":
         await this.handleModel(message)
+        break
+
+      case "config":
+        await this.handleConfig(message)
         break
     }
   }
@@ -205,6 +211,15 @@ export class CommandHandler {
       return
     }
     await this.orchestrator.handleModelSelect(session.id, message)
+  }
+
+  private async handleConfig(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+      return
+    }
+    await this.orchestrator.handleConfigSelect(session.id, message)
   }
 
   private async handlePassthrough(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
