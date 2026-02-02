@@ -133,6 +133,62 @@ export class SessionUpdateHandler {
           }
           break
         }
+        case "agent_thought_chunk": {
+          const content = (update as Record<string, unknown>).content as
+            | Record<string, unknown>
+            | undefined
+          const text = content?.text as string | undefined
+          if (text) {
+            this.logger
+              .withMetadata({ sessionId, textLength: text.length })
+              .trace("Agent thought chunk")
+            await this.streamingCardManager.ensureStreamingCard(active)
+            if (active.streamingCard) {
+              active.streamingCard.accumulatedText += text
+              this.streamingCardManager.scheduleFlush(active)
+            }
+          }
+          break
+        }
+        case "plan": {
+          const entries = (update as Record<string, unknown>).entries as
+            | Array<{ content: string; priority: string; status: string }>
+            | undefined
+          if (entries) {
+            active.currentPlan = entries.map((e) => ({
+              content: e.content,
+              priority: e.priority,
+              status: e.status,
+            }))
+            this.logger
+              .withMetadata({ sessionId, entryCount: entries.length })
+              .trace("Plan update")
+          }
+          break
+        }
+        case "config_option_update": {
+          const configOptions = (update as Record<string, unknown>).configOptions as
+            | unknown[]
+            | undefined
+          if (configOptions) {
+            active.configOptions = configOptions as typeof active.configOptions
+            this.logger
+              .withMetadata({ sessionId, optionCount: configOptions.length })
+              .trace("Config options update")
+          }
+          break
+        }
+        case "session_info_update": {
+          const title = (update as Record<string, unknown>).title as string | undefined | null
+          if (title != null) {
+            active.sessionTitle = title
+            this.logger.withMetadata({ sessionId, title }).trace("Session info update")
+          }
+          break
+        }
+        case "user_message_chunk": {
+          break
+        }
         case "tool_call_update": {
           const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
           const status = (update as Record<string, unknown>).status as string | undefined

@@ -50,6 +50,12 @@ export type StreamingCard = {
   placeholderReplaced: boolean
 }
 
+export type PlanEntry = {
+  content: string
+  priority: string
+  status: string
+}
+
 export type ActiveSession = {
   sessionId: string
   client: AgentClient
@@ -59,6 +65,10 @@ export type ActiveSession = {
   availableModes: acp.SessionMode[]
   currentMode: string
   currentModel?: string
+  currentPlan?: PlanEntry[]
+  configOptions?: acp.SessionConfigOption[]
+  sessionTitle?: string
+  agentCapabilities?: acp.AgentCapabilities
   streamingCard?: StreamingCard
   streamingCardPending?: Promise<void>
   permissionResolvers: Map<string, PermissionResolver>
