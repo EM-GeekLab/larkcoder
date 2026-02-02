@@ -1,3 +1,4 @@
+import { format } from "date-fns"
 import type { Session } from "../session/types.js"
 
 function truncate(text: string, maxLen: number): string {
@@ -234,7 +235,7 @@ type SessionListCardData = {
 export function buildSessionListCard(data: SessionListCardData): Record<string, unknown> {
   const interactiveContainers = data.sessions.map((s) => {
     const prompt = truncate(s.initialPrompt, 60)
-    const time = s.updatedAt.replace("T", " ").slice(0, 19)
+    const time = format(new Date(s.updatedAt), "yyyy-MM-dd HH:mm:ss")
     return {
       tag: "interactive_container",
       width: "fill",
@@ -326,7 +327,7 @@ export function buildSessionListCard(data: SessionListCardData): Record<string, 
 export function buildSessionDeleteCard(data: SessionListCardData): Record<string, unknown> {
   const interactiveContainers = data.sessions.map((s) => {
     const prompt = truncate(s.initialPrompt, 60)
-    const time = s.updatedAt.replace("T", " ").slice(0, 19)
+    const time = format(new Date(s.updatedAt), "yyyy-MM-dd HH:mm:ss")
     return {
       tag: "interactive_container",
       width: "fill",
@@ -334,7 +335,7 @@ export function buildSessionDeleteCard(data: SessionListCardData): Record<string
       horizontal_align: "left",
       background_style: "default",
       has_border: true,
-      border_color: "grey",
+      border_color: "red-300",
       corner_radius: "8px",
       padding: "4px 12px 4px 12px",
       behaviors: [
@@ -363,7 +364,8 @@ export function buildSessionDeleteCard(data: SessionListCardData): Record<string
                   content: prompt,
                   icon: {
                     tag: "standard_icon",
-                    token: "chat-history_outlined",
+                    token: "delete-trash_outlined",
+                    color: "red",
                   },
                 },
               ],

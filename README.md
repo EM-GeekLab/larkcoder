@@ -48,11 +48,11 @@ bun run dev
 
 ```yaml
 lark:
-  app_id: "cli_xxxxxx"          # 飞书应用 App ID
+  app_id: "cli_xxxxxx" # 飞书应用 App ID
   app_secret: "your_app_secret" # 飞书应用 App Secret
 
 agent:
-  working_dir: "/path/to/work"  # Agent 工作目录
+  working_dir: "/path/to/work" # Agent 工作目录
 ```
 
 ## 使用
