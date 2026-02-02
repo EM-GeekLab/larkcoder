@@ -80,27 +80,37 @@ function iconTokenForKind(kind?: string): string {
     case "execute":
       return "code_outlined"
     case "think":
-      return "emoji_outlined"
+      return "time_outlined"
     case "fetch":
-      return "download_outlined"
+      return "language_outlined"
     case "switch_mode":
       return "switch_outlined"
     default:
-      return "setting-inter_outlined"
+      return "sheet-iconsets-greycircle_filled"
   }
 }
 
-function iconForStatus(
-  status: string | undefined,
-  kind: string | undefined,
-): { token: string; color: string } {
-  switch (status) {
-    case "completed":
-      return { token: "done_outlined", color: "grey" }
-    case "failed":
-      return { token: "more-close_outlined", color: "red" }
-    default:
-      return { token: iconTokenForKind(kind), color: "grey" }
+function escapeLarkMd(text: string): string {
+  return text.replace(/</g, "＜").replace(/>/g, "＞").replace(/\*/g, "﹡").replace(/~/g, "∼")
+}
+
+function buildToolCallMarkdown(
+  title: string,
+  kind?: string,
+  textColor?: string,
+  iconColor?: string,
+): Record<string, unknown> {
+  const escaped = escapeLarkMd(title)
+  const content = textColor ? `<font color='${textColor}'>${escaped}</font>` : escaped
+  return {
+    tag: "markdown",
+    content,
+    text_size: "notation",
+    icon: {
+      tag: "standard_icon",
+      token: iconTokenForKind(kind),
+      color: iconColor ?? "grey",
+    },
   }
 }
 
@@ -110,21 +120,53 @@ export function buildToolCallElement(
   kind?: string,
   status?: string,
 ): Record<string, unknown> {
-  const icon = iconForStatus(status, kind)
+  let textColor: string | undefined
+  let iconColor: string
+  let statusIcon: { token: string; color: string }
+
+  if (!status) {
+    textColor = undefined
+    iconColor = "grey"
+    statusIcon = { token: "right-small-ccm_outlined", color: "light_grey" }
+  } else if (status === "failed") {
+    textColor = "grey"
+    iconColor = "red"
+    statusIcon = { token: "close_outlined", color: "red" }
+  } else {
+    textColor = "grey"
+    iconColor = "grey"
+    statusIcon = { token: "done_outlined", color: "green" }
+  }
+
   return {
-    tag: "div",
+    tag: "column_set",
     element_id: elementId,
-    text: {
-      tag: "plain_text",
-      content: title,
-      text_size: "notation",
-      text_color: status === "failed" ? "red" : "grey",
-    },
-    icon: {
-      tag: "standard_icon",
-      token: icon.token,
-      color: icon.color,
-    },
+    horizontal_spacing: "8px",
+    horizontal_align: "left",
+    columns: [
+      {
+        tag: "column",
+        width: "auto",
+        vertical_align: "center",
+        elements: [buildToolCallMarkdown(title, kind, textColor, iconColor)],
+      },
+      {
+        tag: "column",
+        width: "auto",
+        vertical_align: "center",
+        elements: [
+          {
+            tag: "div",
+            text: { tag: "plain_text", content: "" },
+            icon: {
+              tag: "standard_icon",
+              token: statusIcon.token,
+              color: statusIcon.color,
+            },
+          },
+        ],
+      },
+    ],
   }
 }
 
