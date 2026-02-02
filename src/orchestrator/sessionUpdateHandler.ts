@@ -160,9 +160,7 @@ export class SessionUpdateHandler {
               priority: e.priority,
               status: e.status,
             }))
-            this.logger
-              .withMetadata({ sessionId, entryCount: entries.length })
-              .trace("Plan update")
+            this.logger.withMetadata({ sessionId, entryCount: entries.length }).trace("Plan update")
           }
           break
         }
