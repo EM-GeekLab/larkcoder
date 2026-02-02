@@ -13,7 +13,6 @@ import { CommandHandler } from "../command/handler.js"
 import { parseCommand } from "../command/parser.js"
 import {
   PROCESSING_ELEMENT_ID,
-  STREAMING_ELEMENT_ID,
   buildModelSelectCard,
   buildPermissionCard,
   buildPermissionSelectedCard,
@@ -22,6 +21,8 @@ import {
   buildSessionListCard,
   buildStreamingCard,
   buildStreamingCloseSettings,
+  buildStreamingMarkdownElement,
+  buildToolCallElement,
 } from "../lark/cardTemplates.js"
 import { createDocTools } from "../lark/docTools.js"
 import { extractErrorMessage } from "../utils/errors.js"
@@ -39,16 +40,29 @@ type PermissionResolver = {
   options: Array<{ optionId: string; label: string }>
 }
 
+type ToolCallElementInfo = {
+  elementId: string
+  kind?: string
+  title: string
+}
+
 type StreamingCard = {
   cardId: string
   messageId: string
   sequence: number
+
+  activeElementId: string | null
+  elementCounter: number
+
   accumulatedText: string
   lastFlushedText: string
   flushTimer: ReturnType<typeof setTimeout> | null
+
   streamingOpen: boolean
   streamingOpenedAt: number
   placeholderReplaced: boolean
+
+  toolCallElements: Map<string, ToolCallElementInfo>
 }
 
 type ActiveSession = {
@@ -58,6 +72,7 @@ type ActiveSession = {
   availableCommands: string[]
   currentMode: string
   streamingCard?: StreamingCard
+  streamingCardPending?: Promise<void>
   permissionResolvers: Map<string, PermissionResolver>
 }
 
@@ -458,9 +473,6 @@ export class Orchestrator {
       }),
     )
 
-    // Resume streaming with a new card after permission is granted
-    await this.resumeStreamingAfterInteraction(sessionId, cardMessageId, "")
-
     // Resolve the permission promise
     resolver.resolve({
       outcome: { outcome: "selected", optionId },
@@ -558,9 +570,12 @@ export class Orchestrator {
           | Record<string, unknown>
           | undefined
         const text = content?.text as string | undefined
-        if (text && active.streamingCard) {
-          active.streamingCard.accumulatedText += text
-          this.scheduleFlush(sessionId)
+        if (text) {
+          await this.ensureStreamingCard(sessionId)
+          if (active.streamingCard) {
+            active.streamingCard.accumulatedText += text
+            this.scheduleFlush(sessionId)
+          }
         }
         break
       }
@@ -578,14 +593,63 @@ export class Orchestrator {
         active.availableCommands = commands?.map((c) => c.name) ?? []
         break
       }
-      case "tool_call":
-        this.logger
-          .withMetadata({
-            sessionId,
-            tool: (update as Record<string, unknown>).title,
-          })
-          .debug("Agent tool call")
+      case "tool_call": {
+        const title = (update as Record<string, unknown>).title as string | undefined
+        const kind = (update as Record<string, unknown>).kind as string | undefined
+        const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
+        this.logger.withMetadata({ sessionId, tool: title, kind }).debug("Agent tool call")
+        if (title) {
+          await this.ensureStreamingCard(sessionId)
+          if (active.streamingCard) {
+            await this.forceFlush(sessionId)
+            const toolElementId = this.nextElementId(sessionId, "tool")
+            await this.insertElement(sessionId, buildToolCallElement(toolElementId, title, kind))
+            const card = active.streamingCard
+            if (!card) {
+              break
+            }
+            if (toolCallId) {
+              card.toolCallElements.set(toolCallId, {
+                elementId: toolElementId,
+                kind,
+                title,
+              })
+            }
+            card.activeElementId = null
+            card.accumulatedText = ""
+            card.lastFlushedText = ""
+          }
+        }
         break
+      }
+      case "tool_call_update": {
+        const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
+        const status = (update as Record<string, unknown>).status as string | undefined
+        const newTitle = (update as Record<string, unknown>).title as string | undefined | null
+        const newKind = (update as Record<string, unknown>).kind as string | undefined | null
+        this.logger.withMetadata({ sessionId, toolCallId, status }).debug("Agent tool call update")
+        if (toolCallId && active.streamingCard) {
+          const info = active.streamingCard.toolCallElements.get(toolCallId)
+          if (info) {
+            const updatedTitle = newTitle != null ? newTitle : info.title
+            const updatedKind = newKind != null ? newKind : info.kind
+            if (status === "completed" || status === "failed") {
+              const seq = this.nextSequence(sessionId)
+              await this.larkClient.updateCardElement(
+                active.streamingCard.cardId,
+                info.elementId,
+                buildToolCallElement(info.elementId, updatedTitle, updatedKind, status),
+                seq,
+              )
+            }
+            info.title = updatedTitle
+            if (updatedKind !== undefined) {
+              info.kind = updatedKind
+            }
+          }
+        }
+        break
+      }
       default:
         break
     }
@@ -631,12 +695,15 @@ export class Orchestrator {
       cardId,
       messageId,
       sequence: 0,
+      activeElementId: "md_0",
+      elementCounter: 0,
       accumulatedText: initialContent,
       lastFlushedText: initialContent,
       flushTimer: null,
       streamingOpen: true,
       streamingOpenedAt: Date.now(),
       placeholderReplaced: initialContent.length > 0,
+      toolCallElements: new Map(),
     }
   }
 
@@ -657,6 +724,47 @@ export class Orchestrator {
     }, STREAM_FLUSH_INTERVAL_MS)
   }
 
+  private nextElementId(sessionId: string, prefix: string): string {
+    const card = this.activeSessions.get(sessionId)?.streamingCard
+    if (!card) {
+      return `${prefix}_0`
+    }
+    card.elementCounter++
+    return `${prefix}_${card.elementCounter}`
+  }
+
+  private async insertElement(sessionId: string, element: Record<string, unknown>): Promise<void> {
+    const card = this.activeSessions.get(sessionId)?.streamingCard
+    if (!card) {
+      return
+    }
+    const seq = this.nextSequence(sessionId)
+    await this.larkClient.addCardElements(
+      card.cardId,
+      "insert_before",
+      PROCESSING_ELEMENT_ID,
+      [element],
+      seq,
+    )
+  }
+
+  private async ensureActiveElement(sessionId: string): Promise<string | null> {
+    const card = this.activeSessions.get(sessionId)?.streamingCard
+    if (!card) {
+      return null
+    }
+    if (card.activeElementId) {
+      return card.activeElementId
+    }
+
+    const newId = this.nextElementId(sessionId, "md")
+    await this.insertElement(sessionId, buildStreamingMarkdownElement(newId))
+    card.activeElementId = newId
+    card.accumulatedText = ""
+    card.lastFlushedText = ""
+    return newId
+  }
+
   private async flushStreamingCard(sessionId: string): Promise<void> {
     const active = this.activeSessions.get(sessionId)
     const card = active?.streamingCard
@@ -666,26 +774,24 @@ export class Orchestrator {
 
     await this.ensureStreamingOpen(sessionId)
 
+    const elementId = await this.ensureActiveElement(sessionId)
+    if (!elementId) {
+      return
+    }
+
     const content = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
     const seq = this.nextSequence(sessionId)
 
-    // Replace placeholder with actual content when content appears for the first time
-    if (!card.placeholderReplaced && card.accumulatedText.length > 0) {
-      // Use updateCardElement to replace placeholder element with actual content element
+    if (!card.placeholderReplaced) {
       await this.larkClient.updateCardElement(
         card.cardId,
-        STREAMING_ELEMENT_ID,
-        {
-          tag: "markdown",
-          content,
-          element_id: STREAMING_ELEMENT_ID,
-        },
+        "md_0",
+        { tag: "markdown", content, element_id: "md_0" },
         seq,
       )
       card.placeholderReplaced = true
     } else {
-      // Continue streaming content updates
-      await this.larkClient.streamCardText(card.cardId, STREAMING_ELEMENT_ID, content, seq)
+      await this.larkClient.streamCardText(card.cardId, elementId, content, seq)
     }
 
     card.lastFlushedText = card.accumulatedText
@@ -723,13 +829,21 @@ export class Orchestrator {
     return summary
   }
 
-  private async resumeStreamingAfterInteraction(
-    sessionId: string,
-    _replyToMessageId: string,
-    initialContent: string = "",
-  ): Promise<void> {
-    // Send new streaming card as independent message, not replying to previous message
-    await this.createStreamingCard(sessionId, undefined, initialContent)
+  private async ensureStreamingCard(sessionId: string): Promise<void> {
+    const active = this.activeSessions.get(sessionId)
+    if (!active || active.streamingCard) {
+      return
+    }
+    if (active.streamingCardPending) {
+      await active.streamingCardPending
+      return
+    }
+    active.streamingCardPending = this.createStreamingCard(sessionId, undefined, "")
+    try {
+      await active.streamingCardPending
+    } finally {
+      active.streamingCardPending = undefined
+    }
   }
 
   private async closeStreamingCard(sessionId: string, summaryText: string): Promise<void> {

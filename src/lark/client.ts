@@ -252,6 +252,28 @@ export class LarkClient {
     }
   }
 
+  async addCardElements(
+    cardId: string,
+    type: "insert_before" | "insert_after" | "append",
+    targetElementId: string | undefined,
+    elements: Record<string, unknown>[],
+    sequence: number,
+  ): Promise<void> {
+    try {
+      await this.sdk.cardkit.v1.cardElement.create({
+        path: { card_id: cardId },
+        data: {
+          type,
+          target_element_id: targetElementId,
+          elements: JSON.stringify(elements),
+          sequence,
+        },
+      })
+    } catch (error: unknown) {
+      this.logger.withError(error as Error).error("Failed to add card elements")
+    }
+  }
+
   async deleteCardElement(cardId: string, elementId: string, sequence: number): Promise<void> {
     try {
       await this.sdk.cardkit.v1.cardElement.delete({
