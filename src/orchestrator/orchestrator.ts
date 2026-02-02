@@ -194,6 +194,8 @@ export class Orchestrator {
 
     if (message.text) {
       await this.runInSession(session.id, message.text, replyToMessageId)
+    } else {
+      await this.larkClient.replyMarkdownCard(replyToMessageId, "New session created.")
     }
   }
 
@@ -234,6 +236,10 @@ export class Orchestrator {
 
   async runInSession(sessionId: string, prompt: string, replyToMessageId: string): Promise<void> {
     const session = await this.sessionService.getSession(sessionId)
+
+    if (!session.initialPrompt) {
+      await this.sessionService.setInitialPrompt(sessionId, prompt)
+    }
 
     try {
       // Ensure agent session exists

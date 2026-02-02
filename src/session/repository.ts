@@ -105,6 +105,14 @@ export class SessionRepository {
     await this.db.update(sessions).set({ updatedAt: now }).where(eq(sessions.id, id))
   }
 
+  async updateInitialPrompt(id: string, initialPrompt: string): Promise<void> {
+    const now = new Date().toISOString()
+    await this.db
+      .update(sessions)
+      .set({ initialPrompt, updatedAt: now })
+      .where(eq(sessions.id, id))
+  }
+
   async updatePlanMode(id: string, isPlanMode: boolean): Promise<void> {
     const now = new Date().toISOString()
     await this.db.update(sessions).set({ isPlanMode, updatedAt: now }).where(eq(sessions.id, id))

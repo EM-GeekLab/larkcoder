@@ -99,11 +99,7 @@ export class CommandHandler {
   }
 
   private async handleNew(args: string, message: ParsedMessage): Promise<void> {
-    if (args) {
-      await this.orchestrator.handleNewSession({ ...message, text: args }, message.messageId)
-    } else {
-      await this.orchestrator.handleNewSession(message, message.messageId)
-    }
+    await this.orchestrator.handleNewSession({ ...message, text: args }, message.messageId)
   }
 
   private async handleList(message: ParsedMessage): Promise<void> {

@@ -82,6 +82,10 @@ export class SessionService {
     this.logger.info(`Session deleted: ${id}`)
   }
 
+  async setInitialPrompt(id: string, initialPrompt: string): Promise<void> {
+    await this.repo.updateInitialPrompt(id, initialPrompt)
+  }
+
   async setPlanMode(id: string, isPlanMode: boolean): Promise<void> {
     await this.repo.updatePlanMode(id, isPlanMode)
   }
