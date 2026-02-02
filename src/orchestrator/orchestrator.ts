@@ -33,6 +33,16 @@ const STREAM_FLUSH_INTERVAL_MS = 150
 const STREAM_AUTO_CLOSE_MS = 10 * 60 * 1000
 const STREAM_MAX_CONTENT_LENGTH = 100_000
 
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000)
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`
+  }
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`
+}
+
 type PermissionResolver = {
   resolve: (resp: acp.RequestPermissionResponse) => void
   cardMessageId: string
@@ -59,6 +69,7 @@ type StreamingCard = {
   lastFlushedText: string
   flushTimer: ReturnType<typeof setTimeout> | null
 
+  createdAt: number
   streamingOpen: boolean
   streamingOpenedAt: number
   placeholderReplaced: boolean
@@ -808,6 +819,7 @@ export class Orchestrator {
     await this.sessionService.setWorkingMessageId(sessionId, messageId)
 
     active.cardSequences.set(cardId, 0)
+    const now = Date.now()
     active.streamingCard = {
       cardId,
       messageId,
@@ -816,8 +828,9 @@ export class Orchestrator {
       accumulatedText: initialContent,
       lastFlushedText: initialContent,
       flushTimer: null,
+      createdAt: now,
       streamingOpen: true,
-      streamingOpenedAt: Date.now(),
+      streamingOpenedAt: now,
       placeholderReplaced: initialContent.length > 0,
     }
   }
@@ -970,9 +983,20 @@ export class Orchestrator {
       return
     }
 
-    // Delete the "Processing..." indicator before closing
+    // Replace the "Processing..." indicator with elapsed time
+    const elapsed = formatDuration(Date.now() - card.createdAt)
     const seq = this.nextSequence(sessionId)
-    await this.larkClient.deleteCardElement(card.cardId, PROCESSING_ELEMENT_ID, seq)
+    await this.larkClient.updateCardElement(card.cardId, PROCESSING_ELEMENT_ID, {
+      tag: "markdown",
+      content: `<font color='grey'>${elapsed}</font>`,
+      text_size: "notation",
+      element_id: PROCESSING_ELEMENT_ID,
+      icon: {
+        tag: "standard_icon",
+        token: "done_outlined",
+        color: "grey",
+      },
+    }, seq)
 
     const closeSettings = buildStreamingCloseSettings(summaryText)
     const finalSeq = this.nextSequence(sessionId)
