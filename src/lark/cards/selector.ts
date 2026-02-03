@@ -128,16 +128,6 @@ function resolveCurrentValueName(option: ConfigOption): string {
 }
 
 export function buildConfigSelectCard(data: ConfigSelectCardData): Record<string, unknown> {
-  if (data.configOptions.length === 1) {
-    return buildConfigValueSelectCard({
-      sessionId: data.sessionId,
-      configId: data.configOptions[0]!.id,
-      configName: data.configOptions[0]!.name,
-      currentValue: data.configOptions[0]!.currentValue,
-      options: data.configOptions[0]!.options,
-    })
-  }
-
   return buildSelectorCard(
     data.configOptions.map((c) => ({
       label: `${c.name}: **${resolveCurrentValueName(c)}**`,
