@@ -1,8 +1,11 @@
 {
   "name": "larkcoder",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "bin": {
+    "larkcoder": "./bin/larkcoder.ts"
+  },
   "scripts": {
     "dev": "NODE_ENV=development bun src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun --sourcemap=linked",

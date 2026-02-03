@@ -19,6 +19,23 @@
 
 ## 快速开始
 
+### 方式一：使用 bunx（推荐）
+
+直接通过 `bunx` 运行，无需克隆项目：
+
+```bash
+# 初始化配置文件
+bunx --bun larkcoder --init
+
+# 编辑配置文件，填写飞书应用凭据
+# 编辑 config.yaml
+
+# 启动服务
+bunx --bun larkcoder
+```
+
+### 方式二：本地开发
+
 ```bash
 # 克隆项目
 git clone <repo-url> && cd larkcoder
@@ -28,9 +45,6 @@ bun install
 
 # 从模板创建配置文件并填写飞书凭据
 cp config.example.yaml config.yaml
-
-# 初始化数据库
-bun run db:push
 
 # 启动服务
 bun run dev
@@ -43,6 +57,19 @@ bun run dev
 ```
 
 ## 配置
+
+### CLI 选项
+
+```bash
+bunx --bun larkcoder [选项]
+
+选项:
+  -c, --config <path>  指定配置文件路径 (默认: config.yaml)
+  -i, --init           初始化配置文件（从模板创建）
+  -h, --help           显示帮助信息
+```
+
+### 配置文件
 
 编辑 `config.yaml`（参考 `config.example.yaml`）：
 

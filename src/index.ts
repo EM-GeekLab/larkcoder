@@ -13,12 +13,11 @@ import { SessionRepository } from "./session/repository"
 import { SessionService } from "./session/service"
 import { createLogger } from "./utils/logger"
 
-async function main(): Promise<void> {
+export async function start(configPath: string): Promise<void> {
   const logger = createLogger({ prefix: "larkcoder" })
   logger.info("Starting LarkCoder...")
 
   // Load config
-  const configPath = process.env.CONFIG_PATH ?? "config.yaml"
   const config = await loadConfig(configPath)
   logger.info(`Config loaded from ${configPath}`)
 
@@ -87,8 +86,15 @@ async function main(): Promise<void> {
   process.on("SIGINT", shutdown)
 }
 
-main().catch((error: unknown) => {
-  const logger = createLogger({ prefix: "larkcoder" })
-  logger.withError(error as Error).error("Fatal error")
-  process.exit(1)
-})
+async function main(): Promise<void> {
+  const configPath = process.env.CONFIG_PATH ?? "config.yaml"
+  await start(configPath)
+}
+
+if (import.meta.main) {
+  main().catch((error: unknown) => {
+    const logger = createLogger({ prefix: "larkcoder" })
+    logger.withError(error as Error).error("Fatal error")
+    process.exit(1)
+  })
+}
