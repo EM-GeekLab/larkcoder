@@ -1,6 +1,6 @@
 import { format } from "date-fns"
-import type { Session } from "../../session/types.js"
-import { truncate } from "./common.js"
+import type { Session } from "../../session/types"
+import { truncate } from "./common"
 
 type SessionListCardData = {
   sessions: Session[]

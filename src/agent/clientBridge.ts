@@ -1,12 +1,12 @@
 import type * as acp from "@agentclientprotocol/sdk"
-import type { Logger } from "../utils/logger.js"
+import type { Logger } from "../utils/logger"
 import type {
   PermissionRequestCallback,
   SessionUpdateCallback,
   ToolCallRequest,
   ToolDefinition,
   ToolHandler,
-} from "./types.js"
+} from "./types"
 
 const TOOL_LIST_METHOD = "autocoder/tool/list"
 const TOOL_CALL_METHOD = "autocoder/tool/call"

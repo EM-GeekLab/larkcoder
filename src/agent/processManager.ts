@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { Logger } from "../utils/logger.js"
-import type { AgentProcessInfo } from "./types.js"
+import type { Logger } from "../utils/logger"
+import type { AgentProcessInfo } from "./types"
 
 export type ProcessManagerOptions = {
   command: string

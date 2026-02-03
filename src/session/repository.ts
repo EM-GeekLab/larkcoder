@@ -1,7 +1,7 @@
 import { desc, eq, lt } from "drizzle-orm"
-import type { DrizzleDB } from "./db.js"
-import type { CreateSessionParams, Session, SessionStatus } from "./types.js"
-import { processedEvents, sessions } from "./schema.js"
+import type { DrizzleDB } from "./db"
+import type { CreateSessionParams, Session, SessionStatus } from "./types"
+import { processedEvents, sessions } from "./schema"
 
 function rowToSession(row: typeof sessions.$inferSelect): Session {
   return {

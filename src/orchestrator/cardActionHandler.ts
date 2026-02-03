@@ -1,11 +1,11 @@
-import type { ProcessManager } from "../agent/processManager.js"
-import type { LarkClient } from "../lark/client.js"
-import type { CardAction } from "../lark/types.js"
-import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
-import type { PermissionManager } from "./permissionManager.js"
-import type { ActiveSessionLookup } from "./types.js"
-import { buildConfigValueSelectCard, buildSelectedCard } from "../lark/cards/index.js"
+import type { ProcessManager } from "../agent/processManager"
+import type { LarkClient } from "../lark/client"
+import type { CardAction } from "../lark/types"
+import type { SessionService } from "../session/service"
+import type { Logger } from "../utils/logger"
+import type { PermissionManager } from "./permissionManager"
+import type { ActiveSessionLookup } from "./types"
+import { buildConfigValueSelectCard, buildSelectedCard } from "../lark/cards/index"
 
 export class CardActionHandler {
   constructor(

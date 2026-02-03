@@ -1,10 +1,10 @@
 import type * as acp from "@agentclientprotocol/sdk"
-import type { LarkClient } from "../lark/client.js"
-import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
-import type { StreamingCardManager } from "./streamingCardManager.js"
-import { buildPermissionCard, buildPermissionSelectedCard } from "../lark/cards/index.js"
-import { PERMISSION_TIMEOUT_MS, type ActiveSessionLookup } from "./types.js"
+import type { LarkClient } from "../lark/client"
+import type { SessionService } from "../session/service"
+import type { Logger } from "../utils/logger"
+import type { StreamingCardManager } from "./streamingCardManager"
+import { buildPermissionCard, buildPermissionSelectedCard } from "../lark/cards/index"
+import { PERMISSION_TIMEOUT_MS, type ActiveSessionLookup } from "./types"
 
 export class PermissionManager {
   constructor(

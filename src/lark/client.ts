@@ -1,7 +1,7 @@
 import * as lark from "@larksuiteoapi/node-sdk"
-import type { LarkConfig } from "./types.js"
-import { type Logger, createLarkLogger } from "../utils/logger.js"
-import { buildMarkdownCard } from "./cards/index.js"
+import type { LarkConfig } from "./types"
+import { type Logger, createLarkLogger } from "../utils/logger"
+import { buildMarkdownCard } from "./cards/index"
 
 export class LarkClient {
   readonly sdk: lark.Client

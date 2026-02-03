@@ -1,15 +1,15 @@
 import type { ChildProcess } from "node:child_process"
 import * as acp from "@agentclientprotocol/sdk"
 import { Readable, Writable } from "node:stream"
-import type { Logger } from "../utils/logger.js"
+import type { Logger } from "../utils/logger"
 import type {
   AgentClient,
   PermissionRequestCallback,
   SessionUpdateCallback,
   ToolDefinition,
   ToolHandler,
-} from "./types.js"
-import { ClientBridge } from "./clientBridge.js"
+} from "./types"
+import { ClientBridge } from "./clientBridge"
 
 export type CreateAcpClientOptions = {
   process: ChildProcess

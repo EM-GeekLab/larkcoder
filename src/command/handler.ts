@@ -1,9 +1,9 @@
-import type { LarkClient } from "../lark/client.js"
-import type { ParsedMessage } from "../lark/types.js"
-import type { Orchestrator } from "../orchestrator/orchestrator.js"
-import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
-import type { ParsedCommand } from "./parser.js"
+import type { LarkClient } from "../lark/client"
+import type { ParsedMessage } from "../lark/types"
+import type { Orchestrator } from "../orchestrator/orchestrator"
+import type { SessionService } from "../session/service"
+import type { Logger } from "../utils/logger"
+import type { ParsedCommand } from "./parser"
 
 const LOCAL_COMMANDS = new Set([
   "stop",

@@ -1,4 +1,4 @@
-export { buildMarkdownCard, buildSelectedCard, truncate } from "./common.js"
+export { buildMarkdownCard, buildSelectedCard, truncate } from "./common"
 export {
   PROCESSING_ELEMENT_ID,
   buildStreamingCard,
@@ -6,12 +6,12 @@ export {
   buildStreamingMarkdownElement,
   buildStreamingThoughtElement,
   buildToolCallElement,
-} from "./streaming.js"
-export { buildSessionDeleteCard, buildSessionListCard } from "./session.js"
-export { buildPermissionCard, buildPermissionSelectedCard } from "./permission.js"
+} from "./streaming"
+export { buildSessionDeleteCard, buildSessionListCard } from "./session"
+export { buildPermissionCard, buildPermissionSelectedCard } from "./permission"
 export {
   buildConfigSelectCard,
   buildConfigValueSelectCard,
   buildModeSelectCard,
   buildModelSelectCard,
-} from "./selector.js"
+} from "./selector"

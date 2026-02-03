@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolHandler } from "../agent/types.js"
-import type { LarkClient } from "./client.js"
+import type { ToolDefinition, ToolHandler } from "../agent/types"
+import type { LarkClient } from "./client"
 
 type ToolRegistration = { definition: ToolDefinition; handler: ToolHandler }
 

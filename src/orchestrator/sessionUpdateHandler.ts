@@ -1,11 +1,11 @@
 import type * as acp from "@agentclientprotocol/sdk"
-import type { LarkClient } from "../lark/client.js"
-import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
-import type { StreamingCardManager } from "./streamingCardManager.js"
-import { buildToolCallElement } from "../lark/cards/index.js"
-import { extractToolCallDisplay, resolveLabelForTitle } from "./toolCallDisplay.js"
-import { formatDuration, type ActiveSessionLookup, type SessionLockFn } from "./types.js"
+import type { LarkClient } from "../lark/client"
+import type { SessionService } from "../session/service"
+import type { Logger } from "../utils/logger"
+import type { StreamingCardManager } from "./streamingCardManager"
+import { buildToolCallElement } from "../lark/cards/index"
+import { extractToolCallDisplay, resolveLabelForTitle } from "./toolCallDisplay"
+import { formatDuration, type ActiveSessionLookup, type SessionLockFn } from "./types"
 
 export class SessionUpdateHandler {
   constructor(

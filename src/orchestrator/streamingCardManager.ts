@@ -1,14 +1,14 @@
 import { throttle } from "radashi"
-import type { LarkClient } from "../lark/client.js"
-import type { SessionService } from "../session/service.js"
-import type { Logger } from "../utils/logger.js"
+import type { LarkClient } from "../lark/client"
+import type { SessionService } from "../session/service"
+import type { Logger } from "../utils/logger"
 import {
   PROCESSING_ELEMENT_ID,
   buildStreamingCard,
   buildStreamingCloseSettings,
   buildStreamingMarkdownElement,
   buildStreamingThoughtElement,
-} from "../lark/cards/index.js"
+} from "../lark/cards/index"
 import {
   STREAM_AUTO_CLOSE_MS,
   STREAM_MAX_CONTENT_LENGTH,
@@ -16,7 +16,7 @@ import {
   type ActiveSession,
   type ActiveSessionLookup,
   type SessionLockFn,
-} from "./types.js"
+} from "./types"
 
 export class StreamingCardManager {
   constructor(

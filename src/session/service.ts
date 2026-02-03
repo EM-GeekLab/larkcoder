@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto"
-import type { Logger } from "../utils/logger.js"
-import type { SessionRepository } from "./repository.js"
-import type { CreateSessionParams, Session, SessionStatus } from "./types.js"
-import { SessionNotFoundError, SessionStateError } from "../utils/errors.js"
+import type { Logger } from "../utils/logger"
+import type { SessionRepository } from "./repository"
+import type { CreateSessionParams, Session, SessionStatus } from "./types"
+import { SessionNotFoundError, SessionStateError } from "../utils/errors"
 
 const validTransitions: Record<SessionStatus, SessionStatus[]> = {
   idle: ["running"],

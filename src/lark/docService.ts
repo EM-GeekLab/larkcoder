@@ -1,5 +1,5 @@
-import type { Logger } from "../utils/logger.js"
-import type { LarkClient } from "./client.js"
+import type { Logger } from "../utils/logger"
+import type { LarkClient } from "./client"
 
 export class DocService {
   constructor(

@@ -1,6 +1,6 @@
 import type * as acp from "@agentclientprotocol/sdk"
 import type { ThrottledFunction } from "radashi"
-import type { AgentClient } from "../agent/types.js"
+import type { AgentClient } from "../agent/types"
 
 export const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
 export const STREAM_AUTO_CLOSE_MS = 10 * 60 * 1000

@@ -1,30 +1,30 @@
 import type * as acp from "@agentclientprotocol/sdk"
-import type { ProcessManager } from "../agent/processManager.js"
-import type { AgentClient } from "../agent/types.js"
-import type { AppConfig } from "../config/schema.js"
-import type { LarkClient } from "../lark/client.js"
-import type { DocService } from "../lark/docService.js"
-import type { CardAction, ParsedMessage } from "../lark/types.js"
-import type { SessionService } from "../session/service.js"
-import type { Session } from "../session/types.js"
-import type { Logger } from "../utils/logger.js"
-import type { ActiveSession } from "./types.js"
-import { createAcpClient } from "../agent/acpClient.js"
-import { CommandHandler } from "../command/handler.js"
-import { parseCommand } from "../command/parser.js"
+import type { ProcessManager } from "../agent/processManager"
+import type { AgentClient } from "../agent/types"
+import type { AppConfig } from "../config/schema"
+import type { LarkClient } from "../lark/client"
+import type { DocService } from "../lark/docService"
+import type { CardAction, ParsedMessage } from "../lark/types"
+import type { SessionService } from "../session/service"
+import type { Session } from "../session/types"
+import type { Logger } from "../utils/logger"
+import type { ActiveSession } from "./types"
+import { createAcpClient } from "../agent/acpClient"
+import { CommandHandler } from "../command/handler"
+import { parseCommand } from "../command/parser"
 import {
   buildConfigSelectCard,
   buildModeSelectCard,
   buildModelSelectCard,
   buildSessionDeleteCard,
   buildSessionListCard,
-} from "../lark/cards/index.js"
-import { createDocTools } from "../lark/docTools.js"
-import { extractErrorMessage } from "../utils/errors.js"
-import { CardActionHandler } from "./cardActionHandler.js"
-import { PermissionManager } from "./permissionManager.js"
-import { SessionUpdateHandler } from "./sessionUpdateHandler.js"
-import { StreamingCardManager } from "./streamingCardManager.js"
+} from "../lark/cards/index"
+import { createDocTools } from "../lark/docTools"
+import { extractErrorMessage } from "../utils/errors"
+import { CardActionHandler } from "./cardActionHandler"
+import { PermissionManager } from "./permissionManager"
+import { SessionUpdateHandler } from "./sessionUpdateHandler"
+import { StreamingCardManager } from "./streamingCardManager"
 
 export class Orchestrator {
   private activeSessions = new Map<string, ActiveSession>()
