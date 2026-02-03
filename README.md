@@ -9,12 +9,11 @@
 - **多会话管理** — 每个对话/话题独立维护会话，支持创建、恢复、切换和删除
 - **权限确认** — Agent 执行敏感操作时弹出确认卡片，由用户选择是否允许
 - **模型切换** — 在飞书中随时切换 Claude 模型
-- **文档集成** — 可将飞书文档内容作为上下文注入 Agent
 
 ## 前置条件
 
 - [Bun](https://bun.sh) 运行时
-- [Claude Code ACP Server](https://www.npmjs.com/package/@anthropic-ai/claude-code-acp)（`claude-code-acp` 命令可用）
+- [Claude Code ACP Server](https://www.npmjs.com/package/@zed-industries/claude-code-acp)（需先安装：`npm install -g @zed-industries/claude-code-acp`，确保 `claude-code-acp` 命令可用；也可使用其他兼容的 ACP，通过修改配置文件即可）
 - 飞书开放平台应用（需开启消息接收和卡片回调事件）
 
 ## 快速开始
@@ -54,6 +53,8 @@ lark:
 agent:
   working_dir: "/path/to/work" # Agent 工作目录
 ```
+
+> **提示**：可以使用兼容的 ACP，通过修改配置文件中的 `agent.command` 和 `agent.args` 字段即可。
 
 ## 使用
 
