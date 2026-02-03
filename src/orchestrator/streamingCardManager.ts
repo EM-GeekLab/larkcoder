@@ -7,6 +7,7 @@ import {
   buildStreamingCard,
   buildStreamingCloseSettings,
   buildStreamingMarkdownElement,
+  buildStreamingThoughtElement,
 } from "../lark/cards/index.js"
 import {
   STREAM_AUTO_CLOSE_MS,
@@ -69,6 +70,7 @@ export class StreamingCardManager {
       cardId,
       messageId,
       activeElementId: "md_0",
+      activeElementType: null,
       elementCounter: 0,
       accumulatedText: initialContent,
       lastFlushedText: initialContent,
@@ -177,6 +179,29 @@ export class StreamingCardManager {
     card.streamingOpenedAt = Date.now()
   }
 
+  async ensureActiveElementForType(
+    active: ActiveSession,
+    type: "message" | "thought",
+  ): Promise<void> {
+    const card = active.streamingCard
+    if (!card) {
+      return
+    }
+    if (card.activeElementType === type) {
+      return
+    }
+    if (card.activeElementType !== null) {
+      await this.forceFlush(active)
+      if (!active.streamingCard) {
+        return
+      }
+      active.streamingCard.activeElementId = null
+      active.streamingCard.accumulatedText = ""
+      active.streamingCard.lastFlushedText = ""
+    }
+    card.activeElementType = type
+  }
+
   async ensureActiveElement(active: ActiveSession): Promise<string | null> {
     const card = active.streamingCard
     if (!card) {
@@ -187,7 +212,11 @@ export class StreamingCardManager {
     }
 
     const newId = this.nextElementId(active, "md")
-    await this.insertElement(active, buildStreamingMarkdownElement(newId))
+    const element =
+      card.activeElementType === "thought"
+        ? buildStreamingThoughtElement(newId)
+        : buildStreamingMarkdownElement(newId)
+    await this.insertElement(active, element)
     card.activeElementId = newId
     return newId
   }
@@ -261,16 +290,21 @@ export class StreamingCardManager {
       return
     }
 
-    const content = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
+    const rawContent = card.accumulatedText.slice(0, STREAM_MAX_CONTENT_LENGTH)
+    const content =
+      card.activeElementType === "thought" ? `<font color='grey'>${rawContent}</font>` : rawContent
     const seq = this.nextSequence(active)
 
     if (!card.placeholderReplaced) {
-      await this.larkClient.updateCardElement(
-        card.cardId,
-        "md_0",
-        { tag: "markdown", content, element_id: "md_0" },
-        seq,
-      )
+      const element: Record<string, unknown> = {
+        tag: "markdown",
+        content,
+        element_id: "md_0",
+      }
+      if (card.activeElementType === "thought") {
+        element.text_size = "notation"
+      }
+      await this.larkClient.updateCardElement(card.cardId, "md_0", element, seq)
       card.placeholderReplaced = true
     } else {
       await this.larkClient.streamCardText(card.cardId, elementId, content, seq)

@@ -4,6 +4,7 @@ export {
   buildStreamingCard,
   buildStreamingCloseSettings,
   buildStreamingMarkdownElement,
+  buildStreamingThoughtElement,
   buildToolCallElement,
 } from "./streaming.js"
 export { buildSessionDeleteCard, buildSessionListCard } from "./session.js"

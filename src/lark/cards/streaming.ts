@@ -65,6 +65,15 @@ export function buildStreamingMarkdownElement(elementId: string): Record<string,
   }
 }
 
+export function buildStreamingThoughtElement(elementId: string): Record<string, unknown> {
+  return {
+    tag: "markdown",
+    content: "",
+    text_size: "notation",
+    element_id: elementId,
+  }
+}
+
 function iconTokenForKind(kind?: string): string {
   switch (kind) {
     case "read":

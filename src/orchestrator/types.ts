@@ -38,6 +38,7 @@ export type StreamingCard = {
   messageId: string
 
   activeElementId: string | null
+  activeElementType: "message" | "thought" | null
   elementCounter: number
 
   accumulatedText: string

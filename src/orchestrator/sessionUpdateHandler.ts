@@ -45,6 +45,7 @@ export class SessionUpdateHandler {
               .trace("Agent message chunk")
             await this.streamingCardManager.ensureStreamingCard(active)
             if (active.streamingCard) {
+              await this.streamingCardManager.ensureActiveElementForType(active, "message")
               active.streamingCard.accumulatedText += text
               this.streamingCardManager.scheduleFlush(active)
             }
@@ -112,6 +113,7 @@ export class SessionUpdateHandler {
                 await this.larkClient.deleteCardElement(active.streamingCard.cardId, "md_0", seq)
                 active.streamingCard.placeholderReplaced = true
                 active.streamingCard.activeElementId = null
+                active.streamingCard.activeElementType = null
               }
               const toolElementId = this.streamingCardManager.nextElementId(active, "tool")
               await this.streamingCardManager.insertElement(
@@ -133,6 +135,7 @@ export class SessionUpdateHandler {
                 })
               }
               card.activeElementId = null
+              card.activeElementType = null
               card.accumulatedText = ""
               card.lastFlushedText = ""
             }
@@ -150,6 +153,7 @@ export class SessionUpdateHandler {
               .trace("Agent thought chunk")
             await this.streamingCardManager.ensureStreamingCard(active)
             if (active.streamingCard) {
+              await this.streamingCardManager.ensureActiveElementForType(active, "thought")
               active.streamingCard.accumulatedText += text
               this.streamingCardManager.scheduleFlush(active)
             }
