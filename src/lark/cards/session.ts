@@ -5,6 +5,8 @@ import { truncate } from "./common"
 type SessionListCardData = {
   sessions: Session[]
   currentSessionId?: string
+  title?: string
+  descriptions?: Map<string, string>
 }
 
 type SessionListStyle = {
@@ -17,9 +19,12 @@ function buildSessionListBase(
   sessions: Session[],
   currentSessionId: string | undefined,
   style: SessionListStyle,
+  title?: string,
+  descriptions?: Map<string, string>,
 ): Record<string, unknown> {
   const interactiveContainers = sessions.map((s) => {
     const prompt = truncate(s.initialPrompt, 60)
+    const description = descriptions?.get(s.id)
     const isCurrent = currentSessionId !== undefined && s.id === currentSessionId
     const time = format(new Date(s.updatedAt), "yyyy-MM-dd HH:mm:ss")
     return {
@@ -32,6 +37,7 @@ function buildSessionListBase(
       border_color: style.borderColor,
       corner_radius: "8px",
       padding: "4px 12px 4px 12px",
+      vertical_spacing: description ? "0px" : undefined,
       behaviors: [
         {
           type: "callback",
@@ -95,11 +101,21 @@ function buildSessionListBase(
             },
           ],
         },
+        ...(description
+          ? [
+              {
+                tag: "markdown",
+                content: `<font color='grey'>${description}</font>`,
+                text_size: "notation",
+                margin: "0px 0px 0px 24px",
+              },
+            ]
+          : []),
       ],
     }
   })
 
-  return {
+  const card: Record<string, unknown> = {
     schema: "2.0",
     config: {
       wide_screen_mode: true,
@@ -125,20 +141,41 @@ function buildSessionListBase(
       ],
     },
   }
+
+  if (title) {
+    card.header = {
+      title: { tag: "plain_text", content: title },
+      template: "indigo",
+    }
+  }
+
+  return card
 }
 
 export function buildSessionListCard(data: SessionListCardData): Record<string, unknown> {
-  return buildSessionListBase(data.sessions, data.currentSessionId, {
-    borderColor: "grey",
-    icon: { token: "chat-history_outlined" },
-    action: "session_select",
-  })
+  return buildSessionListBase(
+    data.sessions,
+    data.currentSessionId,
+    {
+      borderColor: "grey",
+      icon: { token: "chat-history_outlined" },
+      action: "session_select",
+    },
+    data.title,
+    data.descriptions,
+  )
 }
 
 export function buildSessionDeleteCard(data: SessionListCardData): Record<string, unknown> {
-  return buildSessionListBase(data.sessions, data.currentSessionId, {
-    borderColor: "red-300",
-    icon: { token: "delete-trash_outlined", color: "red" },
-    action: "session_delete",
-  })
+  return buildSessionListBase(
+    data.sessions,
+    data.currentSessionId,
+    {
+      borderColor: "red-300",
+      icon: { token: "delete-trash_outlined", color: "red" },
+      action: "session_delete",
+    },
+    data.title,
+    data.descriptions,
+  )
 }

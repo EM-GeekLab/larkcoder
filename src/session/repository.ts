@@ -1,4 +1,4 @@
-import { desc, eq, lt } from "drizzle-orm"
+import { and, desc, eq, isNull, lt } from "drizzle-orm"
 import type { DrizzleDB } from "./db"
 import type { CreateSessionParams, Session, SessionStatus } from "./types"
 import { processedEvents, sessions } from "./schema"
@@ -16,6 +16,7 @@ function rowToSession(row: typeof sessions.$inferSelect): Session {
     docToken: row.docToken ?? undefined,
     workingMessageId: row.workingMessageId ?? undefined,
     mode: row.mode,
+    projectId: row.projectId ?? undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -38,6 +39,7 @@ export class SessionRepository {
       initialPrompt: params.initialPrompt,
       workingDir: params.workingDir,
       docToken: params.docToken ?? null,
+      projectId: params.projectId ?? null,
       mode: "default",
       createdAt: now,
       updatedAt: now,
@@ -70,6 +72,32 @@ export class SessionRepository {
       .limit(1)
       .get()
     return row ? rowToSession(row) : null
+  }
+
+  async findByProjectId(projectId: string, limit?: number): Promise<Session[]> {
+    const query = this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.projectId, projectId))
+      .orderBy(desc(sessions.createdAt))
+    if (limit) {
+      query.limit(limit)
+    }
+    const rows = await query.all()
+    return rows.map(rowToSession)
+  }
+
+  async findGlobalByChatId(chatId: string, limit?: number): Promise<Session[]> {
+    const query = this.db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.chatId, chatId), isNull(sessions.projectId)))
+      .orderBy(desc(sessions.createdAt))
+    if (limit) {
+      query.limit(limit)
+    }
+    const rows = await query.all()
+    return rows.map(rowToSession)
   }
 
   async findByChatId(chatId: string, limit?: number): Promise<Session[]> {

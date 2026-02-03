@@ -3,6 +3,7 @@ import type { LarkClient } from "../lark/client"
 import type { CardAction } from "../lark/types"
 import type { SessionService } from "../session/service"
 import type { Logger } from "../utils/logger"
+import type { Orchestrator } from "./orchestrator"
 import type { PermissionManager } from "./permissionManager"
 import type { ActiveSessionLookup } from "./types"
 import { buildConfigValueSelectCard, buildSelectedCard } from "../lark/cards/index"
@@ -17,6 +18,7 @@ export class CardActionHandler {
     private stopSession: (sessionId: string) => Promise<void>,
     private cleanupSession: (sessionId: string) => void,
     private getActiveSession: ActiveSessionLookup,
+    private orchestrator: Orchestrator,
   ) {}
 
   async handleCardAction(action: CardAction): Promise<void> {
@@ -33,7 +35,7 @@ export class CardActionHandler {
 
       case "session_select":
         if (action.sessionId) {
-          await this.handleSessionSelect(action.sessionId, action.openMessageId)
+          await this.handleSessionSelect(action.sessionId, action.openChatId, action.openMessageId)
         }
         break
 
@@ -76,17 +78,49 @@ export class CardActionHandler {
         }
         break
 
+      case "project_create":
+        await this.orchestrator.handleProjectFormSubmit(action)
+        break
+
+      case "project_edit":
+        await this.orchestrator.handleProjectEditFormSubmit(action)
+        break
+
+      case "project_cancel":
+        await this.larkClient.updateCard(action.openMessageId, buildSelectedCard("已取消"))
+        break
+
+      case "project_select":
+        if (action.projectId) {
+          await this.handleProjectSelectAction(
+            action.projectId,
+            action.openChatId,
+            action.openMessageId,
+          )
+        }
+        break
+
       default:
         this.logger.warn(`Unknown card action: ${action.action}`)
     }
   }
 
-  private async handleSessionSelect(sessionId: string, cardMessageId: string): Promise<void> {
+  private async handleSessionSelect(
+    sessionId: string,
+    chatId: string,
+    cardMessageId: string,
+  ): Promise<void> {
     try {
       const session = await this.sessionService.getSession(sessionId)
       const label = session.initialPrompt.slice(0, 50)
 
       await this.sessionService.touchSession(sessionId)
+
+      if (session.projectId) {
+        this.orchestrator.setActiveProject(chatId, session.projectId)
+      } else {
+        this.orchestrator.clearActiveProject(chatId)
+      }
 
       const modeLabel = session.mode === "default" ? "" : `\nMode: ${session.mode}`
       await this.larkClient.updateCard(
@@ -209,5 +243,18 @@ export class CardActionHandler {
       this.logger.withError(error as Error).warn(`Session not found for deletion: ${sessionId}`)
       await this.larkClient.updateCard(cardMessageId, buildSelectedCard("Session not found"))
     }
+  }
+
+  private async handleProjectSelectAction(
+    projectId: string,
+    chatId: string,
+    cardMessageId: string,
+  ): Promise<void> {
+    const result = await this.orchestrator.selectProject(chatId, projectId)
+    let text = `Switched to project: ${result.projectTitle}`
+    if (result.sessionPrompt) {
+      text += `\nResumed session: ${result.sessionPrompt}`
+    }
+    await this.larkClient.updateCard(cardMessageId, buildSelectedCard(text))
   }
 }

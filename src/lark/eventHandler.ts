@@ -145,6 +145,7 @@ export class LarkEventHandler {
     const action = data.action as Record<string, unknown> | undefined
     const context = data.context as Record<string, string> | undefined
     const value = action?.value as Record<string, string> | undefined
+    const formValue = action?.form_value as Record<string, string> | undefined
 
     if (!value || !value.action) {
       return null
@@ -161,6 +162,8 @@ export class LarkEventHandler {
       modeId: value.mode_id,
       configId: value.config_id,
       configValue: value.config_value,
+      projectId: value.project_id,
+      formValue: formValue ?? undefined,
     }
   }
 }

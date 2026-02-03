@@ -18,6 +18,7 @@ export const sessions = sqliteTable(
     /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
     workingMessageId: text("working_message_id"),
     mode: text("mode").notNull().default("default"),
+    projectId: text("project_id"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -25,7 +26,23 @@ export const sessions = sqliteTable(
     index("idx_sessions_chat_id").on(table.chatId),
     index("idx_sessions_thread_id").on(table.threadId),
     index("idx_sessions_status").on(table.status),
+    index("idx_sessions_project_id").on(table.projectId),
   ],
+)
+
+export const projects = sqliteTable(
+  "projects",
+  {
+    id: text("id").primaryKey(),
+    chatId: text("chat_id").notNull(),
+    creatorId: text("creator_id").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    folderName: text("folder_name").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("idx_projects_chat_id").on(table.chatId)],
 )
 
 export const processedEvents = sqliteTable("processed_events", {

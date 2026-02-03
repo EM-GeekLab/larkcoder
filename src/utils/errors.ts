@@ -36,3 +36,10 @@ export class SessionStateError extends LarkCoderError {
     this.name = "SessionStateError"
   }
 }
+
+export class ProjectNotFoundError extends LarkCoderError {
+  constructor(identifier: string) {
+    super(`Project not found: ${identifier}`, "PROJECT_NOT_FOUND")
+    this.name = "ProjectNotFoundError"
+  }
+}

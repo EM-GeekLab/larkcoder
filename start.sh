@@ -26,10 +26,6 @@ if [ ! -d node_modules ]; then
   bun install
 fi
 
-# Generate / apply database migrations
-echo "Applying database migrations..."
-bun run db:push
-
 # Start
 echo "Starting LarkCoder..."
 exec bun run dev

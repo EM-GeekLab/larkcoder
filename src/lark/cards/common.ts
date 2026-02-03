@@ -5,7 +5,13 @@ export function truncate(text: string, maxLen: number): string {
   return `${text.slice(0, maxLen)}...`
 }
 
-export function buildMarkdownCard(content: string): Record<string, unknown> {
+type IconOption = { token: string; color?: string }
+
+export function buildMarkdownCard(content: string, icon?: IconOption): Record<string, unknown> {
+  const element: Record<string, unknown> = { tag: "markdown", content }
+  if (icon) {
+    element.icon = { tag: "standard_icon", ...icon }
+  }
   return {
     schema: "2.0",
     config: {
@@ -13,7 +19,7 @@ export function buildMarkdownCard(content: string): Record<string, unknown> {
       update_multi: true,
     },
     body: {
-      elements: [{ tag: "markdown", content }],
+      elements: [element],
     },
   }
 }

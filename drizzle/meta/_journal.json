@@ -8,6 +8,13 @@
       "when": 1770061728069,
       "tag": "0000_broad_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1770112016310,
+      "tag": "0001_boring_beyonder",
+      "breakpoints": true
     }
   ]
 }

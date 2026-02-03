@@ -1,5 +1,6 @@
 type SelectorItem = {
   label: string
+  description?: string
   isCurrent?: boolean
   callbackValue: Record<string, unknown>
 }
@@ -19,6 +20,7 @@ function buildSelectorCard(items: SelectorItem[]): Record<string, unknown> {
       border_color: isCurrent ? undefined : "grey",
       corner_radius: "8px",
       padding: "4px 12px 4px 12px",
+      vertical_spacing: item.description ? "0px" : undefined,
       behaviors: [
         {
           type: "callback",
@@ -35,6 +37,16 @@ function buildSelectorCard(items: SelectorItem[]): Record<string, unknown> {
               : undefined,
           margin: hasCurrentItem && !isCurrent ? "0px 0px 0px 23px" : undefined,
         },
+        ...(item.description
+          ? [
+              {
+                tag: "markdown",
+                content: `<font color='grey'>${item.description}</font>`,
+                text_size: "notation",
+                margin: hasCurrentItem ? "0px 0px 0px 23px" : undefined,
+              },
+            ]
+          : []),
       ],
     }
   })

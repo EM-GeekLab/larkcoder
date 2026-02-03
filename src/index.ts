@@ -6,6 +6,8 @@ import { LarkClient } from "./lark/client"
 import { DocService } from "./lark/docService"
 import { LarkEventHandler } from "./lark/eventHandler"
 import { Orchestrator } from "./orchestrator/orchestrator"
+import { ProjectRepository } from "./project/repository"
+import { ProjectService } from "./project/service"
 import { createDatabase } from "./session/db"
 import { SessionRepository } from "./session/repository"
 import { SessionService } from "./session/service"
@@ -28,6 +30,14 @@ async function main(): Promise<void> {
   const sessionRepo = new SessionRepository(db, config.database.eventMaxAge * 1000)
   const sessionService = new SessionService(sessionRepo, createLogger({ prefix: "session" }))
 
+  // Initialize project layer
+  const projectRepo = new ProjectRepository(db)
+  const projectService = new ProjectService(
+    projectRepo,
+    config.agent.workingDir,
+    createLogger({ prefix: "project" }),
+  )
+
   // Initialize process manager
   const processManager = new ProcessManager({
     command: config.agent.command,
@@ -47,6 +57,7 @@ async function main(): Promise<void> {
     larkClient,
     docService,
     createLogger({ prefix: "orchestrator" }),
+    projectService,
   )
 
   // Initialize event handler and create EventDispatcher

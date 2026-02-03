@@ -14,6 +14,7 @@ export type Session = {
   /** 当前 streaming card 所在的飞书消息 ID，streaming 结束后清空 */
   workingMessageId?: string
   mode: string
+  projectId?: string
   createdAt: string
   updatedAt: string
 }
@@ -25,4 +26,5 @@ export type CreateSessionParams = {
   initialPrompt: string
   workingDir: string
   docToken?: string
+  projectId?: string
 }

@@ -42,6 +42,14 @@ export class SessionService {
     return this.repo.findByChatId(chatId, limit)
   }
 
+  async listSessionsByProject(projectId: string, limit?: number): Promise<Session[]> {
+    return this.repo.findByProjectId(projectId, limit)
+  }
+
+  async listGlobalSessions(chatId: string, limit?: number): Promise<Session[]> {
+    return this.repo.findGlobalByChatId(chatId, limit)
+  }
+
   private transition(session: Session, nextStatus: SessionStatus): void {
     const allowed = validTransitions[session.status]
     if (!allowed?.includes(nextStatus)) {
