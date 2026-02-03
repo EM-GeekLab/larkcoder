@@ -24,6 +24,10 @@ export function buildMarkdownCard(content: string, icon?: IconOption): Record<st
   }
 }
 
+export function escapeLarkMd(text: string): string {
+  return text.replace(/</g, "＜").replace(/>/g, "＞").replace(/\*/g, "﹡").replace(/~/g, "∼")
+}
+
 export function buildSelectedCard(text: string): Record<string, unknown> {
   return {
     schema: "2.0",

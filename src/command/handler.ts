@@ -4,6 +4,7 @@ import type { Orchestrator } from "../orchestrator/orchestrator"
 import type { SessionService } from "../session/service"
 import type { Logger } from "../utils/logger"
 import type { ParsedCommand } from "./parser"
+import { buildPlanCard } from "../lark/cards/index"
 
 const LOCAL_COMMANDS = new Set([
   "stop",
@@ -157,6 +158,13 @@ export class CommandHandler {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
+
+    const currentPlan = this.orchestrator.getCurrentPlan(session.id)
+    if (currentPlan && currentPlan.length > 0) {
+      await this.larkClient.replyCard(message.messageId, buildPlanCard(currentPlan))
+      return
+    }
+
     const currentMode = this.orchestrator.getCurrentMode(session.id) ?? session.mode
     const newMode = currentMode === "plan" ? "default" : "plan"
     await this.switchMode(session.id, newMode, message.messageId)

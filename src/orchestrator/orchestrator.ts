@@ -11,7 +11,7 @@ import type { ProjectService } from "../project/service"
 import type { SessionService } from "../session/service"
 import type { Session } from "../session/types"
 import type { Logger } from "../utils/logger"
-import type { ActiveSession } from "./types"
+import type { ActiveSession, PlanEntry } from "./types"
 import { createAcpClient } from "../agent/acpClient"
 import { CommandHandler } from "../command/handler"
 import { parseCommand } from "../command/parser"
@@ -410,6 +410,10 @@ export class Orchestrator {
 
   getCurrentMode(sessionId: string): string | undefined {
     return this.activeSessions.get(sessionId)?.currentMode
+  }
+
+  getCurrentPlan(sessionId: string): PlanEntry[] | undefined {
+    return this.activeSessions.get(sessionId)?.currentPlan
   }
 
   async setSessionMode(sessionId: string, modeId: string): Promise<void> {

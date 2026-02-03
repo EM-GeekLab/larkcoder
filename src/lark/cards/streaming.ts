@@ -1,3 +1,5 @@
+import { escapeLarkMd } from "./common"
+
 export const PROCESSING_ELEMENT_ID = "processing_indicator"
 
 export function buildStreamingCard(initialContent?: string): Record<string, unknown> {
@@ -97,10 +99,6 @@ function iconTokenForKind(kind?: string): string {
     default:
       return "sheet-iconsets-greycircle_filled"
   }
-}
-
-function escapeLarkMd(text: string): string {
-  return text.replace(/</g, "＜").replace(/>/g, "＞").replace(/\*/g, "﹡").replace(/~/g, "∼")
 }
 
 function buildToolCallMarkdown(
