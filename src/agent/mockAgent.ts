@@ -55,9 +55,21 @@ interface AgentSession {
   currentThoughtLevel: string
 }
 
+type ToolCallOpts = {
+  title: string
+  kind: acp.ToolKind
+  toolName?: string
+  locations?: acp.ToolCallLocation[]
+  rawInput?: unknown
+  rawOutput?: unknown
+  status?: "completed" | "failed"
+  duration?: number
+}
+
 class MockAgent implements acp.Agent {
   private connection: acp.AgentSideConnection
   private sessions: Map<string, AgentSession>
+  private callCounter = 0
 
   constructor(connection: acp.AgentSideConnection) {
     this.connection = connection
@@ -136,7 +148,6 @@ class MockAgent implements acp.Agent {
   }
 
   async authenticate(_params: acp.AuthenticateRequest): Promise<acp.AuthenticateResponse | void> {
-    // No auth needed - return empty response
     return {}
   }
 
@@ -238,136 +249,258 @@ class MockAgent implements acp.Agent {
     }
   }
 
-  private async simulateTurn(sessionId: string, abortSignal: AbortSignal): Promise<void> {
+  // ── Helpers ──────────────────────────────────────────────────
+
+  private nextCallId(): string {
+    return `call_${++this.callCounter}`
+  }
+
+  private sleep(ms: number, signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) =>
+      setTimeout(() => {
+        if (signal.aborted) {
+          reject(new Error("Aborted"))
+        } else {
+          resolve()
+        }
+      }, ms),
+    )
+  }
+
+  private async textChunk(sessionId: string, text: string): Promise<void> {
+    await this.connection.sessionUpdate({
+      sessionId,
+      update: {
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text },
+      },
+    })
+  }
+
+  private async thoughtChunk(sessionId: string, text: string): Promise<void> {
+    await this.connection.sessionUpdate({
+      sessionId,
+      update: {
+        sessionUpdate: "agent_thought_chunk",
+        content: { type: "text", text },
+      },
+    })
+  }
+
+  private async toolCall(
+    sessionId: string,
+    opts: ToolCallOpts,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const id = this.nextCallId()
+    const meta = opts.toolName ? { claudeCode: { toolName: opts.toolName } } : undefined
+
+    await this.connection.sessionUpdate({
+      sessionId,
+      update: {
+        sessionUpdate: "tool_call",
+        toolCallId: id,
+        title: opts.title,
+        kind: opts.kind,
+        status: "pending",
+        ...(opts.locations && { locations: opts.locations }),
+        ...(opts.rawInput != null && { rawInput: opts.rawInput }),
+        ...(meta && { _meta: meta }),
+      },
+    })
+
+    await this.sleep(opts.duration ?? 800, signal)
+
+    await this.connection.sessionUpdate({
+      sessionId,
+      update: {
+        sessionUpdate: "tool_call_update",
+        toolCallId: id,
+        status: opts.status ?? "completed",
+        ...(opts.rawOutput != null && { rawOutput: opts.rawOutput }),
+      },
+    })
+  }
+
+  // ── Simulation ───────────────────────────────────────────────
+
+  private async simulateTurn(sessionId: string, signal: AbortSignal): Promise<void> {
     const session = this.sessions.get(sessionId)
     if (!session) {
       return
     }
 
-    // Send initial text chunk
-    await this.connection.sessionUpdate({
-      sessionId,
-      update: {
-        sessionUpdate: "agent_message_chunk",
-        content: {
-          type: "text",
-          text: "我正在处理您的请求。让我先了解一下当前的情况...",
-        },
-      },
-    })
+    const cwd = session.cwd
 
-    await this.simulateModelInteraction(abortSignal)
+    // 1. Thinking
+    await this.thoughtChunk(sessionId, "用户想要了解项目情况，我需要先读取文件结构，")
+    await this.sleep(300, signal)
+    await this.thoughtChunk(sessionId, "然后搜索关键代码，最后做出修改。")
+    await this.sleep(500, signal)
 
-    // Send a tool call that doesn't need permission (read operation)
-    await this.connection.sessionUpdate({
+    // 2. Text
+    await this.textChunk(sessionId, "我正在分析项目结构，让我先查看相关文件...\n\n")
+    await this.sleep(300, signal)
+
+    // 3. Read (kind: read) — title 固定为 "Read File"，路径在 locations
+    await this.toolCall(
       sessionId,
-      update: {
-        sessionUpdate: "tool_call",
-        toolCallId: "call_1",
-        title: "读取项目文件",
+      {
+        title: "Read File",
         kind: "read",
-        status: "pending",
-        locations: [{ path: `${session.cwd}/README.md` }],
-        rawInput: { path: `${session.cwd}/README.md` },
+        toolName: "Read",
+        locations: [{ path: `${cwd}/README.md` }],
+        rawInput: { file_path: `${cwd}/README.md` },
+        rawOutput: { content: "# LarkCoder\n\n通过飞书 IM 消息控制 Claude Code。" },
       },
-    })
+      signal,
+    )
 
-    await this.simulateModelInteraction(abortSignal)
-
-    // Update tool call to completed
-    await this.connection.sessionUpdate({
+    // 4. Grep (kind: search) — title 小写 "grep"
+    await this.toolCall(
       sessionId,
-      update: {
-        sessionUpdate: "tool_call_update",
-        toolCallId: "call_1",
-        status: "completed",
-        content: [
-          {
-            type: "content",
-            content: {
-              type: "text",
-              text: "# LarkCoder\n\n通过飞书 IM 消息控制 Claude Code (ACP Server)。",
-            },
-          },
-        ],
-        rawOutput: {
-          content: "# LarkCoder\n\n通过飞书 IM 消息控制 Claude Code (ACP Server)。",
-        },
+      {
+        title: `grep "export.*function" ${cwd}/src/index.ts`,
+        kind: "search",
+        toolName: "Grep",
+        rawInput: { pattern: "export.*function", path: `${cwd}/src/index.ts` },
+        rawOutput: { matches: ["export function main()"] },
       },
-    })
+      signal,
+    )
 
-    await this.simulateModelInteraction(abortSignal)
-
-    // Send more text
-    await this.connection.sessionUpdate({
+    // 5. Glob/Find (kind: search)
+    await this.toolCall(
       sessionId,
-      update: {
-        sessionUpdate: "agent_message_chunk",
-        content: {
-          type: "text",
-          text: " 我已经了解了项目结构。现在我需要做一些改进。",
-        },
+      {
+        title: `Find ${cwd}/src **/*.ts`,
+        kind: "search",
+        toolName: "Glob",
+        rawInput: { pattern: "**/*.ts", path: `${cwd}/src` },
+        rawOutput: { files: ["index.ts", "config.ts", "utils.ts"] },
       },
-    })
+      signal,
+    )
 
-    await this.simulateModelInteraction(abortSignal)
+    await this.textChunk(sessionId, "找到了相关文件。让我搜索一些文档...\n\n")
+    await this.sleep(300, signal)
 
-    // Send a tool call that DOES need permission (edit operation)
+    // 6. WebFetch (kind: fetch)
+    await this.toolCall(
+      sessionId,
+      {
+        title: "Fetch https://docs.example.com/api",
+        kind: "fetch",
+        toolName: "WebFetch",
+        rawInput: { url: "https://docs.example.com/api", prompt: "Extract API docs" },
+        rawOutput: { content: "API documentation content..." },
+        duration: 2000,
+      },
+      signal,
+    )
+
+    // 7. WebSearch (kind: fetch) — title 不含 "Search" 前缀
+    await this.toolCall(
+      sessionId,
+      {
+        title: '"Bun runtime API 2026"',
+        kind: "fetch",
+        toolName: "WebSearch",
+        rawInput: { query: "Bun runtime API 2026" },
+        rawOutput: { results: [{ title: "Bun docs", url: "https://bun.sh" }] },
+        duration: 1500,
+      },
+      signal,
+    )
+
+    // 8. Think (kind: think)
+    await this.toolCall(
+      sessionId,
+      {
+        title: "Thinking",
+        kind: "think",
+        rawInput: { thought: "分析最佳实现方案..." },
+        rawOutput: { thought: "应该使用模块化架构" },
+        duration: 1200,
+      },
+      signal,
+    )
+
+    // 9. Bash success (kind: execute)
+    await this.toolCall(
+      sessionId,
+      {
+        title: "Run `bun run check`",
+        kind: "execute",
+        toolName: "Bash",
+        rawInput: { command: "bun run check" },
+        rawOutput: { exitCode: 0, stdout: "No errors found." },
+        duration: 3000,
+      },
+      signal,
+    )
+
+    // 10. Bash failure (kind: execute)
+    await this.toolCall(
+      sessionId,
+      {
+        title: "Run `bun run test`",
+        kind: "execute",
+        toolName: "Bash",
+        rawInput: { command: "bun run test" },
+        rawOutput: { exitCode: 1, stderr: "FAIL src/utils.test.ts" },
+        status: "failed",
+        duration: 2000,
+      },
+      signal,
+    )
+
+    await this.textChunk(sessionId, "类型检查通过，但测试有失败。现在进行修改...\n\n")
+    await this.sleep(300, signal)
+
+    // 11. Write (kind: edit) — 需要权限
+    const writeCallId = this.nextCallId()
+    const writePath = `${cwd}/src/config.ts`
+    const writeMeta = { claudeCode: { toolName: "Write" } }
+
     await this.connection.sessionUpdate({
       sessionId,
       update: {
         sessionUpdate: "tool_call",
-        toolCallId: "call_2",
-        title: "修改配置文件",
+        toolCallId: writeCallId,
+        title: `Write ${writePath}`,
         kind: "edit",
         status: "pending",
-        locations: [{ path: `${session.cwd}/config.json` }],
+        _meta: writeMeta,
+        locations: [{ path: writePath }],
         rawInput: {
-          path: `${session.cwd}/config.json`,
-          content: '{"version": "0.2.0"}',
+          file_path: writePath,
+          content: 'export const VERSION = "0.2.0";\n',
         },
       },
     })
 
-    // Request permission for the sensitive operation
     const permissionResponse = await this.connection.requestPermission({
       sessionId,
       toolCall: {
-        toolCallId: "call_2",
-        title: "修改配置文件",
+        toolCallId: writeCallId,
+        title: `Write ${writePath}`,
         kind: "edit",
         status: "pending",
-        locations: [{ path: `${session.cwd}/config.json` }],
+        locations: [{ path: writePath }],
         rawInput: {
-          path: `${session.cwd}/config.json`,
-          content: '{"version": "0.2.0"}',
+          file_path: writePath,
+          content: 'export const VERSION = "0.2.0";\n',
         },
       },
       options: [
-        {
-          kind: "allow_once",
-          name: "允许此更改",
-          optionId: "allow",
-        },
-        {
-          kind: "reject_once",
-          name: "跳过此更改",
-          optionId: "reject",
-        },
+        { kind: "allow_once", name: "允许此更改", optionId: "allow" },
+        { kind: "reject_once", name: "跳过此更改", optionId: "reject" },
       ],
     })
 
     if (permissionResponse.outcome.outcome === "cancelled") {
-      await this.connection.sessionUpdate({
-        sessionId,
-        update: {
-          sessionUpdate: "agent_message_chunk",
-          content: {
-            type: "text",
-            text: " 权限请求已取消。",
-          },
-        },
-      })
+      await this.textChunk(sessionId, "权限请求已取消。")
       return
     }
 
@@ -377,42 +510,55 @@ class MockAgent implements acp.Agent {
           sessionId,
           update: {
             sessionUpdate: "tool_call_update",
-            toolCallId: "call_2",
+            toolCallId: writeCallId,
             status: "completed",
-            rawOutput: {
-              success: true,
-              message: "配置文件已更新",
-            },
+            rawOutput: { success: true },
           },
         })
 
-        await this.simulateModelInteraction(abortSignal)
+        await this.sleep(300, signal)
 
-        await this.connection.sessionUpdate({
+        // 12. Delete (kind: delete)
+        await this.toolCall(
           sessionId,
-          update: {
-            sessionUpdate: "agent_message_chunk",
-            content: {
-              type: "text",
-              text: " 完成！我已经成功更新了配置文件。更改已应用。",
-            },
+          {
+            title: `Delete ${cwd}/src/config.old.ts`,
+            kind: "delete",
+            rawInput: { path: `${cwd}/src/config.old.ts` },
+            rawOutput: { success: true },
+            duration: 500,
           },
-        })
+          signal,
+        )
+
+        // 13. Move (kind: move)
+        await this.toolCall(
+          sessionId,
+          {
+            title: `Rename ${cwd}/temp.ts → ${cwd}/src/utils.ts`,
+            kind: "move",
+            rawInput: { from: `${cwd}/temp.ts`, to: `${cwd}/src/utils.ts` },
+            rawOutput: { success: true },
+            duration: 500,
+          },
+          signal,
+        )
+
+        await this.textChunk(sessionId, "完成！所有更改已成功应用。")
         break
       }
       case "reject": {
-        await this.simulateModelInteraction(abortSignal)
-
         await this.connection.sessionUpdate({
           sessionId,
           update: {
-            sessionUpdate: "agent_message_chunk",
-            content: {
-              type: "text",
-              text: " 我理解您不想进行此更改。我将跳过配置文件的更新。",
-            },
+            sessionUpdate: "tool_call_update",
+            toolCallId: writeCallId,
+            status: "failed",
           },
         })
+
+        await this.sleep(300, signal)
+        await this.textChunk(sessionId, "好的，已跳过文件修改。")
         break
       }
       default:
@@ -420,19 +566,6 @@ class MockAgent implements acp.Agent {
           `Unexpected permission outcome ${JSON.stringify(permissionResponse.outcome)}`,
         )
     }
-  }
-
-  private simulateModelInteraction(abortSignal: AbortSignal): Promise<void> {
-    return new Promise((resolve, reject) =>
-      setTimeout(() => {
-        // In a real agent, you'd pass this abort signal to the LLM client
-        if (abortSignal.aborted) {
-          reject(new Error("Aborted"))
-        } else {
-          resolve()
-        }
-      }, 1000),
-    )
   }
 
   async cancel(params: acp.CancelNotification): Promise<void> {
