@@ -396,7 +396,9 @@ export class Orchestrator {
       try {
         await active.client.cancel({ sessionId: active.acpSessionId })
       } catch {
-        // Ignore cancel errors
+        this.logger
+          .withError(new Error(`Failed to cancel session ${sessionId}`))
+          .error("Failed to cancel session")
       }
     }
     this.processManager.kill(sessionId)
@@ -438,10 +440,16 @@ export class Orchestrator {
     if (!active) {
       return
     }
-    await active.client.setSessionMode({
-      sessionId: active.acpSessionId,
-      modeId,
-    })
+    await active.client
+      .setSessionMode({
+        sessionId: active.acpSessionId,
+        modeId,
+      })
+      .catch((error: unknown) => {
+        this.logger
+          .withError(error as Error)
+          .error(`Failed to set session mode ${sessionId} to ${modeId}`)
+      })
   }
 
   async handleConfigSelect(sessionId: string, message: ParsedMessage): Promise<void> {
@@ -465,14 +473,20 @@ export class Orchestrator {
     if (!active) {
       return
     }
-    const result = (await active.client.setSessionConfigOption({
-      sessionId: active.acpSessionId,
-      configId,
-      value,
-    })) as { configOptions?: acp.SessionConfigOption[] }
+    try {
+      const result = (await active.client.setSessionConfigOption({
+        sessionId: active.acpSessionId,
+        configId,
+        value,
+      })) as { configOptions?: acp.SessionConfigOption[] }
 
-    if (result.configOptions) {
-      active.configOptions = result.configOptions
+      if (result.configOptions) {
+        active.configOptions = result.configOptions
+      }
+    } catch (error: unknown) {
+      this.logger
+        .withError(error as Error)
+        .error(`Failed to set session config option ${configId} to ${value}`)
     }
   }
 

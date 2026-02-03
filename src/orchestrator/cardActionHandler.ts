@@ -162,11 +162,17 @@ export class CardActionHandler {
     await this.sessionService.setMode(sessionId, modeId)
     const active = this.getActiveSession(sessionId)
     if (active) {
-      await active.client.setSessionMode({
-        sessionId: active.acpSessionId,
-        modeId,
-      })
-      active.currentMode = modeId
+      try {
+        await active.client.setSessionMode({
+          sessionId: active.acpSessionId,
+          modeId,
+        })
+        active.currentMode = modeId
+      } catch (error: unknown) {
+        this.logger
+          .withError(error as Error)
+          .error(`Failed to set session mode ${sessionId} to ${modeId}`)
+      }
     }
     const display = active?.availableModes.find((m) => m.id === modeId)?.name ?? modeId
     await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`Mode: ${display}`))
