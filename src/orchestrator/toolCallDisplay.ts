@@ -17,7 +17,7 @@ const KIND_CONFIG: Record<string, KindConfig> = {
   delete: { label: "Delete", aliases: ["delete", "remove"] },
   move: { label: "Move", aliases: ["move", "rename"] },
   search: { label: "Search", aliases: ["search", "grep", "find"] },
-  execute: { label: "Run", aliases: ["run"] },
+  execute: { label: "Run", aliases: ["run", "bash", "exec", "execute", "shell"] },
   think: { label: "Think", aliases: ["think"] },
   fetch: { label: "Fetch", aliases: ["fetch", "websearch", "search"] },
   switch_mode: { label: "Switch", aliases: ["switch"] },
