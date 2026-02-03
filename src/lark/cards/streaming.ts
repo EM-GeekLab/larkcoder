@@ -157,6 +157,7 @@ export function buildToolCallElement(
   return {
     tag: "column_set",
     element_id: elementId,
+    flex_mode: "flow",
     horizontal_spacing: "8px",
     horizontal_align: "left",
     columns: [
