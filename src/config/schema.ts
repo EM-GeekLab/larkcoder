@@ -6,6 +6,7 @@ const rawConfigSchema = z.object({
     app_secret: z.string().min(1),
     doc_token: z.string().min(1).optional(),
     doc_type: z.enum(["docx", "wiki"]).optional(),
+    stream_flush_interval: z.number().int().positive().default(150),
   }),
 
   agent: z.object({
@@ -32,6 +33,7 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
     appSecret: raw.lark.app_secret,
     docToken: raw.lark.doc_token,
     docType: raw.lark.doc_type,
+    streamFlushInterval: raw.lark.stream_flush_interval,
   },
   agent: {
     command: raw.agent.command,

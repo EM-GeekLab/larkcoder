@@ -1,3 +1,4 @@
+import { throttle } from "radashi"
 import type { LarkClient } from "../lark/client.js"
 import type { SessionService } from "../session/service.js"
 import type { Logger } from "../utils/logger.js"
@@ -9,7 +10,6 @@ import {
 } from "../lark/cards/index.js"
 import {
   STREAM_AUTO_CLOSE_MS,
-  STREAM_FLUSH_INTERVAL_MS,
   STREAM_MAX_CONTENT_LENGTH,
   formatDuration,
   type ActiveSession,
@@ -24,6 +24,7 @@ export class StreamingCardManager {
     private logger: Logger,
     private withSessionLock: SessionLockFn,
     private getActiveSession: ActiveSessionLookup,
+    private flushInterval: number,
   ) {}
 
   async createStreamingCard(
@@ -57,6 +58,13 @@ export class StreamingCardManager {
 
     active.cardSequences.set(cardId, 0)
     const now = Date.now()
+    const sessionId = active.sessionId
+    const throttledFlush = throttle({ interval: this.flushInterval, trailing: true }, () => {
+      const current = this.getActiveSession(sessionId)
+      if (current) {
+        void this.withSessionLock(sessionId, () => this.flushStreamingCard(current))
+      }
+    })
     active.streamingCard = {
       cardId,
       messageId,
@@ -64,7 +72,7 @@ export class StreamingCardManager {
       elementCounter: 0,
       accumulatedText: initialContent,
       lastFlushedText: initialContent,
-      flushTimer: null,
+      throttledFlush,
       createdAt: now,
       streamingOpen: true,
       streamingOpenedAt: now,
@@ -74,22 +82,13 @@ export class StreamingCardManager {
 
   scheduleFlush(active: ActiveSession): void {
     const card = active.streamingCard
-    if (!card || card.flushTimer) {
+    if (!card) {
       return
     }
-
     if (card.accumulatedText === card.lastFlushedText) {
       return
     }
-
-    const sessionId = active.sessionId
-    card.flushTimer = setTimeout(() => {
-      card.flushTimer = null
-      const current = this.getActiveSession(sessionId)
-      if (current) {
-        void this.withSessionLock(sessionId, () => this.flushStreamingCard(current))
-      }
-    }, STREAM_FLUSH_INTERVAL_MS)
+    card.throttledFlush()
   }
 
   async forceFlush(active: ActiveSession): Promise<void> {
@@ -97,12 +96,6 @@ export class StreamingCardManager {
     if (!card) {
       return
     }
-
-    if (card.flushTimer) {
-      clearTimeout(card.flushTimer)
-      card.flushTimer = null
-    }
-
     await this.flushStreamingCard(active)
   }
 

@@ -1,6 +1,7 @@
 lark:
   app_id: "cli_xxxxxx"
   app_secret: "your_app_secret"
+  stream_flush_interval: 150 # ms, streaming output throttle interval
 
 agent:
   command: "claude-code-acp"

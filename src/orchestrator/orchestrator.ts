@@ -52,6 +52,7 @@ export class Orchestrator {
       logger,
       withSessionLock,
       getActiveSession,
+      config.lark.streamFlushInterval,
     )
 
     this.permissionManager = new PermissionManager(
@@ -489,9 +490,6 @@ export class Orchestrator {
       for (const resolver of active.permissionResolvers.values()) {
         clearTimeout(resolver.timer)
       }
-      if (active.streamingCard?.flushTimer) {
-        clearTimeout(active.streamingCard.flushTimer)
-      }
     }
     this.activeSessions.delete(sessionId)
     this.sessionMutexes.delete(sessionId)
@@ -502,9 +500,6 @@ export class Orchestrator {
     for (const active of this.activeSessions.values()) {
       for (const resolver of active.permissionResolvers.values()) {
         clearTimeout(resolver.timer)
-      }
-      if (active.streamingCard?.flushTimer) {
-        clearTimeout(active.streamingCard.flushTimer)
       }
     }
     this.activeSessions.clear()

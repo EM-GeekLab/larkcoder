@@ -1,8 +1,8 @@
 import type * as acp from "@agentclientprotocol/sdk"
+import type { ThrottledFunction } from "radashi"
 import type { AgentClient } from "../agent/types.js"
 
 export const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
-export const STREAM_FLUSH_INTERVAL_MS = 150
 export const STREAM_AUTO_CLOSE_MS = 10 * 60 * 1000
 export const STREAM_MAX_CONTENT_LENGTH = 100_000
 
@@ -42,7 +42,7 @@ export type StreamingCard = {
 
   accumulatedText: string
   lastFlushedText: string
-  flushTimer: ReturnType<typeof setTimeout> | null
+  throttledFlush: ThrottledFunction<[]>
 
   createdAt: number
   streamingOpen: boolean
