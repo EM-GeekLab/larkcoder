@@ -258,24 +258,26 @@ export class CommandHandler {
     await this.orchestrator.handleConfigSelect(session.id, message)
   }
 
+  private readonly projectSubcommands = new Map<string, (message: ParsedMessage) => Promise<void>>([
+    ["new", (message) => this.orchestrator.handleProjectCreate(message)],
+    ["list", (message) => this.orchestrator.handleListProjects(message)],
+    ["info", (message) => this.orchestrator.handleProjectInfo(message)],
+    ["edit", (message) => this.orchestrator.handleProjectEdit(message)],
+    ["exit", (message) => this.orchestrator.handleProjectExit(message)],
+    ["root", (message) => this.orchestrator.handleProjectExit(message)],
+  ])
+
   private async handleProject(args: string, message: ParsedMessage): Promise<void> {
     const sub = args.trim().toLowerCase()
-    if (sub === "new") {
-      await this.orchestrator.handleProjectCreate(message)
-    } else if (sub === "list") {
-      await this.orchestrator.handleListProjects(message)
-    } else if (sub === "info") {
-      await this.orchestrator.handleProjectInfo(message)
-    } else if (sub === "edit") {
-      await this.orchestrator.handleProjectEdit(message)
-    } else if (sub === "exit" || sub === "root") {
-      await this.orchestrator.handleProjectExit(message)
-    } else {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "/project new — Create a new project\n/project list — List and switch projects\n/project info — Show current project info\n/project edit — Edit current project\n/project exit — Exit current project",
-      )
+    const handler = this.projectSubcommands.get(sub)
+    if (handler) {
+      await handler(message)
+      return
     }
+    await this.larkClient.replyMarkdownCard(
+      message.messageId,
+      "/project new — Create a new project\n/project list — List and switch projects\n/project info — Show current project info\n/project edit — Edit current project\n/project exit — Exit current project",
+    )
   }
 
   private async handlePassthrough(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
