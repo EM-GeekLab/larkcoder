@@ -1,20 +1,21 @@
-import { createClient } from "@libsql/client"
-import { drizzle } from "drizzle-orm/libsql"
-import { migrate } from "drizzle-orm/libsql/migrator"
+import { Database } from "bun:sqlite"
+import { sql } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/bun-sqlite"
+import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import * as schema from "./schema"
 
 export type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>
 
-export async function createDatabase(dbPath: string): Promise<{
+export function createDatabase(dbPath: string): {
   db: DrizzleDB
   close: () => void
-}> {
-  const client = createClient({ url: `file:${dbPath}` })
-  await client.execute("PRAGMA journal_mode = WAL")
-  await client.execute("PRAGMA foreign_keys = ON")
+} {
+  const client = new Database(dbPath)
+  const db = drizzle({ client, schema })
 
-  const db = drizzle(client, { schema })
-  await migrate(db, { migrationsFolder: "./drizzle" })
+  db.run(sql`PRAGMA journal_mode = WAL`)
+  db.run(sql`PRAGMA foreign_keys = ON`)
+  migrate(db, { migrationsFolder: "./drizzle" })
 
   return { db, close: () => client.close() }
 }

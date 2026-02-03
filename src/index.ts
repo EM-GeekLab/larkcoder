@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   mkdirSync(dirname(config.database.path), { recursive: true })
 
   // Initialize data layer
-  const { db, close: closeDb } = await createDatabase(config.database.path)
+  const { db, close: closeDb } = createDatabase(config.database.path)
   const sessionRepo = new SessionRepository(db, config.database.eventMaxAge * 1000)
   const sessionService = new SessionService(sessionRepo, createLogger({ prefix: "session" }))
 
