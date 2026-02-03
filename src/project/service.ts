@@ -29,6 +29,11 @@ export class ProjectService {
   ) {}
 
   async createProject(params: CreateProjectParams): Promise<Project> {
+    const error = validateFolderName(params.folderName)
+    if (error) {
+      throw new Error(error)
+    }
+
     const id = randomUUID()
     const project = await this.repo.create(id, params)
 
