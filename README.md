@@ -1,12 +1,13 @@
 # LarkCoder
 
-通过飞书 IM 消息控制 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code)，在远程服务器上完成编码工作。
+通过飞书 IM 消息控制 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) 等 ACP 兼容的 Coding Agent，在远程服务器上完成编码工作。
 
 ## 功能
 
-- **飞书对话驱动** — 在飞书聊天中直接向 Claude Code 发送编码指令，支持私聊和群组
+- **飞书对话驱动** — 在飞书聊天中直接向 ACP 兼容的 Coding Agent 发送编码指令，支持私聊和群组
 - **流式输出** — 通过飞书交互式卡片实时展示 Agent 的输出内容和工具调用过程
 - **多会话管理** — 每个对话/话题独立维护会话，支持创建、恢复、切换和删除
+- **项目管理** — 支持创建、切换、编辑项目，每个项目拥有独立的工作目录和会话空间
 - **权限确认** — Agent 执行敏感操作时弹出确认卡片，由用户选择是否允许
 - **模型切换** — 在飞书中随时切换 Claude 模型
 
