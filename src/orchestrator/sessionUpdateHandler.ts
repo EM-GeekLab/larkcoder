@@ -78,20 +78,26 @@ export class SessionUpdateHandler {
           if (existing) {
             const updatedKind = kind ?? existing.kind
             const updatedLabel = label ?? existing.label
-            const seq = this.streamingCardManager.nextSequenceForCard(active, existing.cardId)
-            await this.larkClient.updateCardElement(
-              existing.cardId,
-              existing.elementId,
-              buildToolCallElement(
+            if (
+              title !== existing.title ||
+              updatedKind !== existing.kind ||
+              updatedLabel !== existing.label
+            ) {
+              const seq = this.streamingCardManager.nextSequenceForCard(active, existing.cardId)
+              await this.larkClient.updateCardElement(
+                existing.cardId,
                 existing.elementId,
-                title,
-                updatedKind,
-                undefined,
-                undefined,
-                updatedLabel,
-              ),
-              seq,
-            )
+                buildToolCallElement(
+                  existing.elementId,
+                  title,
+                  updatedKind,
+                  undefined,
+                  undefined,
+                  updatedLabel,
+                ),
+                seq,
+              )
+            }
             existing.title = title
             existing.label = updatedLabel
             if (updatedKind !== undefined) {
