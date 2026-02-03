@@ -128,12 +128,72 @@ function resolveCurrentValueName(option: ConfigOption): string {
 }
 
 export function buildConfigSelectCard(data: ConfigSelectCardData): Record<string, unknown> {
-  return buildSelectorCard(
-    data.configOptions.map((c) => ({
-      label: `${c.name}: **${resolveCurrentValueName(c)}**`,
-      callbackValue: { action: "config_detail", session_id: data.sessionId, config_id: c.id },
-    })),
-  )
+  const containers = data.configOptions.map((c) => ({
+    tag: "interactive_container",
+    width: "fill",
+    height: "auto",
+    horizontal_align: "left",
+    has_border: true,
+    border_color: "grey",
+    corner_radius: "8px",
+    padding: "4px 12px 4px 12px",
+    behaviors: [
+      {
+        type: "callback",
+        value: { action: "config_detail", session_id: data.sessionId, config_id: c.id },
+      },
+    ],
+    elements: [
+      {
+        tag: "column_set",
+        flex_mode: "bisect",
+        columns: [
+          {
+            tag: "column",
+            width: "weighted",
+            weight: 1,
+            vertical_align: "center",
+            elements: [{ tag: "markdown", content: c.name }],
+          },
+          {
+            tag: "column",
+            width: "auto",
+            vertical_align: "center",
+            elements: [
+              {
+                tag: "markdown",
+                content: `<font color='grey'>${resolveCurrentValueName(c)}</font>`,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }))
+
+  return {
+    schema: "2.0",
+    config: { wide_screen_mode: true, update_multi: true },
+    body: {
+      elements: [
+        {
+          tag: "column_set",
+          flex_mode: "none",
+          background_style: "default",
+          columns: [
+            {
+              tag: "column",
+              width: "weighted",
+              weight: 1,
+              vertical_align: "top",
+              vertical_spacing: "8px",
+              elements: containers,
+            },
+          ],
+        },
+      ],
+    },
+  }
 }
 
 type ConfigValueSelectCardData = {
