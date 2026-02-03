@@ -1,6 +1,7 @@
 import type * as acp from "@agentclientprotocol/sdk"
 import type { ThrottledFunction } from "radashi"
 import type { AgentClient } from "../agent/types"
+import type { CardAction } from "../lark/types"
 
 export const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
 export const STREAM_AUTO_CLOSE_MS = 10 * 60 * 1000
@@ -79,3 +80,13 @@ export type ActiveSession = {
 
 export type SessionLockFn = <T>(sessionId: string, fn: () => Promise<T>) => Promise<T>
 export type ActiveSessionLookup = (sessionId: string) => ActiveSession | undefined
+
+export type SelectProjectResult = { projectTitle: string; sessionPrompt?: string }
+
+export type ProjectCallbacks = {
+  handleFormSubmit: (action: CardAction) => Promise<void>
+  handleEditFormSubmit: (action: CardAction) => Promise<void>
+  selectProject: (chatId: string, projectId: string) => Promise<SelectProjectResult>
+  setActiveProject: (chatId: string, projectId: string) => void
+  clearActiveProject: (chatId: string) => void
+}

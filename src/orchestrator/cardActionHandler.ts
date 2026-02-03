@@ -3,9 +3,8 @@ import type { LarkClient } from "../lark/client"
 import type { CardAction } from "../lark/types"
 import type { SessionService } from "../session/service"
 import type { Logger } from "../utils/logger"
-import type { Orchestrator } from "./orchestrator"
 import type { PermissionManager } from "./permissionManager"
-import type { ActiveSessionLookup } from "./types"
+import type { ActiveSessionLookup, ProjectCallbacks } from "./types"
 import { buildConfigValueSelectCard, buildSelectedCard } from "../lark/cards/index"
 
 export class CardActionHandler {
@@ -18,7 +17,7 @@ export class CardActionHandler {
     private stopSession: (sessionId: string) => Promise<void>,
     private cleanupSession: (sessionId: string) => void,
     private getActiveSession: ActiveSessionLookup,
-    private orchestrator: Orchestrator,
+    private projectCallbacks: ProjectCallbacks,
   ) {}
 
   async handleCardAction(action: CardAction): Promise<void> {
@@ -79,11 +78,11 @@ export class CardActionHandler {
         break
 
       case "project_create":
-        await this.orchestrator.handleProjectFormSubmit(action)
+        await this.projectCallbacks.handleFormSubmit(action)
         break
 
       case "project_edit":
-        await this.orchestrator.handleProjectEditFormSubmit(action)
+        await this.projectCallbacks.handleEditFormSubmit(action)
         break
 
       case "project_cancel":
@@ -117,11 +116,12 @@ export class CardActionHandler {
       await this.sessionService.touchSession(sessionId)
 
       if (session.projectId) {
-        this.orchestrator.setActiveProject(chatId, session.projectId)
+        this.projectCallbacks.setActiveProject(chatId, session.projectId)
       } else {
-        this.orchestrator.clearActiveProject(chatId)
+        this.projectCallbacks.clearActiveProject(chatId)
       }
 
+      // TODO: If project is changed, should display the new project name: "Switched to project: <project name>"
       const modeLabel = session.mode === "default" ? "" : `\nMode: ${session.mode}`
       await this.larkClient.updateCard(
         cardMessageId,
@@ -250,7 +250,7 @@ export class CardActionHandler {
     chatId: string,
     cardMessageId: string,
   ): Promise<void> {
-    const result = await this.orchestrator.selectProject(chatId, projectId)
+    const result = await this.projectCallbacks.selectProject(chatId, projectId)
     let text = `Switched to project: ${result.projectTitle}`
     if (result.sessionPrompt) {
       text += `\nResumed session: ${result.sessionPrompt}`
