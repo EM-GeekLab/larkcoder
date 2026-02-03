@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "NODE_ENV=development bun src/index.ts",
     "start": "bun bin/larkcoder.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --sourcemap=linked",
+    "build": "bun build bin/larkcoder.ts --outdir dist --target bun --sourcemap=linked",
     "check": "tsc --noEmit",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

@@ -1,11 +1,10 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { existsSync, writeFileSync } from "node:fs"
+import { resolve } from "node:path"
+import { getExampleConfig } from "./config-example.macro.ts" with { type: "macro" }
 import { start } from "../src/index"
 
 const DEFAULT_CONFIG_NAME = "config.yaml"
-const EXAMPLE_CONFIG_NAME = "config.example.yaml"
 
 function parseArgs(): { configPath?: string; init?: boolean; help?: boolean } {
   const args: { configPath?: string; init?: boolean; help?: boolean } = {}
@@ -41,28 +40,12 @@ function showHelp(): void {
 }
 
 function initConfig(configPath: string): void {
-  // Try to find example config in current working directory first
-  let examplePath = join(process.cwd(), EXAMPLE_CONFIG_NAME)
-  
-  // If not found, try relative to the bin directory (for bunx usage)
-  if (!existsSync(examplePath)) {
-    const binDir = dirname(fileURLToPath(import.meta.url))
-    const packageRoot = dirname(binDir)
-    examplePath = join(packageRoot, EXAMPLE_CONFIG_NAME)
-  }
-
-  if (!existsSync(examplePath)) {
-    console.error(`错误: 找不到模板文件 ${EXAMPLE_CONFIG_NAME}`)
-    console.error(`提示: 请确保在项目根目录运行，或确保模板文件存在`)
-    process.exit(1)
-  }
-
   if (existsSync(configPath)) {
     console.error(`错误: 配置文件已存在: ${configPath}`)
     process.exit(1)
   }
 
-  const exampleContent = readFileSync(examplePath, "utf8")
+  const exampleContent = getExampleConfig()
   writeFileSync(configPath, exampleContent, "utf8")
   console.log(`✓ 已创建配置文件: ${configPath}`)
   console.log(`请编辑配置文件并填写飞书应用凭据，然后重新运行。`)
