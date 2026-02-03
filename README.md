@@ -43,10 +43,20 @@ git clone <repo-url> && cd larkcoder
 # 安装依赖
 bun install
 
-# 从模板创建配置文件并填写飞书凭据
-cp config.example.yaml config.yaml
+# 初始化配置文件（使用 CLI）
+bun run start -- --init
+# 或直接运行
+bun bin/larkcoder.ts --init
 
-# 启动服务
+# 编辑配置文件，填写飞书应用凭据
+# 编辑 config.yaml
+
+# 启动服务（使用 CLI，推荐用于本地调试）
+bun run start
+# 或直接运行
+bun bin/larkcoder.ts
+
+# 或使用开发模式（直接运行 src/index.ts，使用环境变量 CONFIG_PATH）
 bun run dev
 ```
 
@@ -55,6 +65,10 @@ bun run dev
 ```bash
 ./start.sh
 ```
+
+**本地调试提示**：
+- 使用 `bun run start` 或 `bun bin/larkcoder.ts` 可以像 `bunx --bun larkcoder` 一样使用 CLI 功能（如 `--init`、`--config` 等），但运行的是本地代码，方便调试和修改
+- 使用 `bun run dev` 直接运行 `src/index.ts`，适合快速启动（使用默认 `config.yaml` 或 `CONFIG_PATH` 环境变量）
 
 ## 配置
 
