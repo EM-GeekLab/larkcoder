@@ -518,6 +518,24 @@ export class Orchestrator {
     return this.projectHandler?.getProjectName(projectId)
   }
 
+  private async buildProjectContext(projectId?: string): Promise<string | undefined> {
+    if (!projectId || !this.projectService) {
+      return undefined
+    }
+
+    const project = await this.projectService.findProject(projectId)
+    if (!project) {
+      return undefined
+    }
+
+    const parts = [`# Project: ${project.title}`]
+    if (project.description) {
+      parts.push(`Description: ${project.description}`)
+    }
+
+    return parts.join("\n")
+  }
+
   private async ensureAgentSession(session: Session): Promise<void> {
     const existing = this.activeSessions.get(session.id)
     if (existing) {
@@ -534,7 +552,10 @@ export class Orchestrator {
     }
 
     const docContext = await this.docService.buildDocContext(session.docToken)
-    const systemPrompt = [this.config.agent.systemPrompt, docContext].filter(Boolean).join("\n")
+    const projectContext = await this.buildProjectContext(session.projectId)
+    const systemPrompt = [this.config.agent.systemPrompt, docContext, projectContext]
+      .filter(Boolean)
+      .join("\n")
 
     const acpClient = createAcpClient({
       process: child,
