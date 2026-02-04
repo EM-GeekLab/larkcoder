@@ -2,13 +2,13 @@
   "name": "larkcoder",
   "version": "0.1.0",
   "private": false,
-  "type": "module",
   "bin": {
     "larkcoder": "./dist/larkcoder.js"
   },
   "files": [
     "dist/*.js"
   ],
+  "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development bun src/index.ts",
     "start": "bun bin/larkcoder.ts",

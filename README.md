@@ -67,6 +67,7 @@ bun run dev
 ```
 
 **本地调试提示**：
+
 - 使用 `bun run start` 或 `bun bin/larkcoder.ts` 可以像 `bunx --bun larkcoder` 一样使用 CLI 功能（如 `--init`、`--config` 等），但运行的是本地代码，方便调试和修改
 - 使用 `bun run dev` 直接运行 `src/index.ts`，适合快速启动（使用默认 `config.yaml` 或 `CONFIG_PATH` 环境变量）
 
@@ -89,18 +90,18 @@ bunx --bun larkcoder [选项]
 
 ```yaml
 lark:
-  app_id: "cli_xxxxxx"              # 飞书应用 App ID
-  app_secret: "your_app_secret"     # 飞书应用 App Secret
-  stream_flush_interval: 150        # ms, 流式输出节流间隔
+  app_id: "cli_xxxxxx" # 飞书应用 App ID
+  app_secret: "your_app_secret" # 飞书应用 App Secret
+  stream_flush_interval: 150 # ms, 流式输出节流间隔
 
 agent:
-  command: "claude-code-acp"        # ACP 命令（可替换为其他兼容的 ACP）
-  args: []                          # 命令参数
-  working_dir: "/path/to/work"      # Agent 工作目录
+  command: "claude-code-acp" # ACP 命令（可替换为其他兼容的 ACP）
+  args: [] # 命令参数
+  working_dir: "/path/to/work" # Agent 工作目录
 
 database:
-  path: "data/larkcoder.db"         # 数据库文件路径
-  event_max_age: 86400              # 秒，事件最大保留时间（默认 1 天）
+  path: "data/larkcoder.db" # 数据库文件路径
+  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天）
 ```
 
 > **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 和 `agent.args` 字段即可。
