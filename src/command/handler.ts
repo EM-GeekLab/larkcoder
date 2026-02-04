@@ -16,6 +16,7 @@ const LOCAL_COMMANDS = new Set([
   "listall",
   "resume",
   "delete",
+  "todo",
   "plan",
   "solo",
   "yolo",
@@ -23,6 +24,7 @@ const LOCAL_COMMANDS = new Set([
   "info",
   "model",
   "config",
+  "command",
   "project",
   "help",
 ])
@@ -38,11 +40,13 @@ const HELP_TEXT = `Available commands:
 /delete — Delete a session
 /stop — Stop the running agent
 /kill — Kill running shell command
-/plan — Show current plan
+/todo — Show current task checklist
+/plan — Alias for /todo
 /solo — Toggle solo mode (bypass all permissions)
 /mode [name] — Show or switch mode (use /mode to see available modes)
 /info — Show current session info
 /model — Select model
+/command — Show agent commands
 /config — Show and change config options
 /project — Show project subcommands
 /project new — Create a new project
@@ -110,8 +114,9 @@ export class CommandHandler {
         await this.handleDelete(message)
         break
 
+      case "todo":
       case "plan":
-        await this.handlePlan(message)
+        await this.handleTodo(message)
         break
 
       case "solo":
@@ -129,6 +134,10 @@ export class CommandHandler {
 
       case "model":
         await this.handleModel(message)
+        break
+
+      case "command":
+        await this.handleCommand(message)
         break
 
       case "config":
@@ -186,7 +195,7 @@ export class CommandHandler {
     await this.orchestrator.handleDeleteSessions(message)
   }
 
-  private async handlePlan(message: ParsedMessage): Promise<void> {
+  private async handleTodo(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
@@ -299,6 +308,15 @@ export class CommandHandler {
     await this.orchestrator.handleModelSelect(session.id, message)
   }
 
+  private async handleCommand(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+      return
+    }
+    await this.orchestrator.handleCommandSelect(session.id, message)
+  }
+
   private async handleConfig(message: ParsedMessage): Promise<void> {
     const session = await this.orchestrator.resolveSession(message)
     if (!session) {
@@ -352,7 +370,7 @@ export class CommandHandler {
     const available = this.orchestrator.getAvailableCommands(session.id)
     const commandText = `/${parsed.command}${parsed.args ? ` ${parsed.args}` : ""}`
 
-    if (available.includes(parsed.command)) {
+    if (available.some((c) => c.name === parsed.command)) {
       if (session.status === "idle") {
         await this.orchestrator.runInSession(session.id, commandText, message.messageId)
       } else if (session.status === "running") {

@@ -11,6 +11,7 @@ export { buildSessionDeleteCard, buildSessionListCard } from "./session"
 export { buildPermissionCard, buildPermissionSelectedCard } from "./permission"
 export { buildPlanCard } from "./plan"
 export {
+  buildCommandSelectCard,
   buildConfigSelectCard,
   buildConfigValueSelectCard,
   buildModeSelectCard,

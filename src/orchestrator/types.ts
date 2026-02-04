@@ -63,7 +63,7 @@ export type ActiveSession = {
   sessionId: string
   client: AgentClient
   acpSessionId: string
-  availableCommands: string[]
+  availableCommands: acp.AvailableCommand[]
   availableModels: acp.ModelInfo[]
   availableModes: acp.SessionMode[]
   currentMode: string

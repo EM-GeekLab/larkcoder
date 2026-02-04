@@ -25,5 +25,6 @@ export type CardAction = {
   configId?: string
   configValue?: string
   projectId?: string
+  commandName?: string
   formValue?: Record<string, string>
 }

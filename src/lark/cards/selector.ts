@@ -96,6 +96,21 @@ export function buildModelSelectCard(data: ModelSelectCardData): Record<string, 
   )
 }
 
+type CommandSelectCardData = {
+  sessionId: string
+  commands: Array<{ name: string; description?: string }>
+}
+
+export function buildCommandSelectCard(data: CommandSelectCardData): Record<string, unknown> {
+  return buildSelectorCard(
+    data.commands.map((c) => ({
+      label: `/${c.name}`,
+      description: c.description,
+      callbackValue: { action: "command_select", session_id: data.sessionId, command_name: c.name },
+    })),
+  )
+}
+
 type ModeSelectCardData = {
   sessionId: string
   currentMode: string

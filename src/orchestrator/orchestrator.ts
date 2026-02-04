@@ -15,6 +15,7 @@ import { parseCommand } from "../command/parser"
 import { ShellCommandHandler } from "../command/shellCommandHandler"
 import { ShellExecutor } from "../command/shellExecutor"
 import {
+  buildCommandSelectCard,
   buildConfigSelectCard,
   buildModeSelectCard,
   buildModelSelectCard,
@@ -109,6 +110,7 @@ export class Orchestrator {
           this.projectHandler?.setActiveProject(chatId, projectId),
         clearActiveProject: (chatId) => this.projectHandler?.clearActiveProject(chatId),
       },
+      (sessionId, command, replyTo) => this.runInSession(sessionId, `/${command}`, replyTo),
     )
 
     // Create shell executor and handler
@@ -442,7 +444,7 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)
   }
 
-  getAvailableCommands(sessionId: string): string[] {
+  getAvailableCommands(sessionId: string): acp.AvailableCommand[] {
     return this.activeSessions.get(sessionId)?.availableCommands ?? []
   }
 
@@ -488,6 +490,31 @@ export class Orchestrator {
           .withError(error as Error)
           .error(`Failed to set session mode ${sessionId} to ${modeId}`)
       })
+  }
+
+  async handleCommandSelect(sessionId: string, message: ParsedMessage): Promise<void> {
+    const session = await this.sessionService.getSession(sessionId)
+    await this.ensureAgentSession(session)
+
+    const active = this.activeSessions.get(sessionId)
+    const commands = active?.availableCommands ?? []
+
+    if (commands.length === 0) {
+      await this.larkClient.replyMarkdownCard(
+        message.messageId,
+        "No commands available. Send a message first to initialize the session.",
+      )
+      return
+    }
+
+    const card = buildCommandSelectCard({
+      sessionId,
+      commands: commands.map((c) => ({
+        name: c.name,
+        description: c.description,
+      })),
+    })
+    await this.larkClient.replyCard(message.messageId, card)
   }
 
   async handleConfigSelect(sessionId: string, message: ParsedMessage): Promise<void> {

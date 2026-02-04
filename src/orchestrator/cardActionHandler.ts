@@ -18,6 +18,7 @@ export class CardActionHandler {
     private cleanupSession: (sessionId: string) => void,
     private getActiveSession: ActiveSessionLookup,
     private projectCallbacks: ProjectCallbacks,
+    private runCommand: (sessionId: string, command: string, replyTo: string) => Promise<void>,
   ) {}
 
   async handleCardAction(action: CardAction): Promise<void> {
@@ -66,6 +67,16 @@ export class CardActionHandler {
             action.sessionId,
             action.configId,
             action.configValue,
+            action.openMessageId,
+          )
+        }
+        break
+
+      case "command_select":
+        if (action.sessionId && action.commandName) {
+          await this.handleCommandSelectAction(
+            action.sessionId,
+            action.commandName,
             action.openMessageId,
           )
         }
@@ -225,6 +236,15 @@ export class CardActionHandler {
 
     const configName = active?.configOptions?.find((c) => c.id === configId)?.name ?? configId
     await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`${configName}: ${value}`))
+  }
+
+  private async handleCommandSelectAction(
+    sessionId: string,
+    commandName: string,
+    cardMessageId: string,
+  ): Promise<void> {
+    await this.larkClient.updateCard(cardMessageId, buildSelectedCard(`/${commandName}`))
+    await this.runCommand(sessionId, commandName, cardMessageId)
   }
 
   private async handleSessionDeleteAction(sessionId: string, cardMessageId: string): Promise<void> {

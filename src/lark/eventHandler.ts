@@ -157,6 +157,7 @@ export class LarkEventHandler {
       configId: value.config_id,
       configValue: value.config_value,
       projectId: value.project_id,
+      commandName: value.command_name,
       formValue: formValue ?? undefined,
     }
   }

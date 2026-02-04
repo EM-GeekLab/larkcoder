@@ -56,7 +56,10 @@ export class SessionUpdateHandler {
           break
         }
         case "available_commands_update": {
-          active.availableCommands = update.availableCommands.map((c) => c.name)
+          active.availableCommands = update.availableCommands
+          this.logger
+            .withMetadata({ sessionId, commandsCount: update.availableCommands.length })
+            .debug("Available commands update")
           break
         }
         case "tool_call": {
