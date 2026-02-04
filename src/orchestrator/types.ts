@@ -64,6 +64,7 @@ export type ActiveSession = {
   client: AgentClient
   acpSessionId: string
   availableCommands: acp.AvailableCommand[]
+  commandsReady: PromiseWithResolvers<void>
   availableModels: acp.ModelInfo[]
   availableModes: acp.SessionMode[]
   currentMode: string

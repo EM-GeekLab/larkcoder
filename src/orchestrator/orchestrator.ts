@@ -497,13 +497,17 @@ export class Orchestrator {
     await this.ensureAgentSession(session)
 
     const active = this.activeSessions.get(sessionId)
-    const commands = active?.availableCommands ?? []
 
+    if (active && active.availableCommands.length === 0) {
+      await Promise.race([
+        active.commandsReady.promise,
+        new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+      ])
+    }
+
+    const commands = active?.availableCommands ?? []
     if (commands.length === 0) {
-      await this.larkClient.replyMarkdownCard(
-        message.messageId,
-        "No commands available. Send a message first to initialize the session.",
-      )
+      await this.larkClient.replyMarkdownCard(message.messageId, "No commands available.")
       return
     }
 
@@ -677,6 +681,7 @@ export class Orchestrator {
       client: acpClient,
       acpSessionId,
       availableCommands: [],
+      commandsReady: Promise.withResolvers<void>(),
       availableModels: modelState?.availableModels ?? [],
       availableModes: modeState?.availableModes ?? [],
       currentMode: modeState?.currentModeId ?? session.mode,

@@ -57,6 +57,7 @@ export class SessionUpdateHandler {
         }
         case "available_commands_update": {
           active.availableCommands = update.availableCommands
+          active.commandsReady.resolve()
           this.logger
             .withMetadata({ sessionId, commandsCount: update.availableCommands.length })
             .debug("Available commands update")
