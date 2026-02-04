@@ -97,7 +97,7 @@ function iconTokenForKind(kind?: string): string {
     case "switch_mode":
       return "switch_outlined"
     default:
-      return "sheet-iconsets-greycircle_filled"
+      return "ellipse_outlined"
   }
 }
 

@@ -1,3 +1,4 @@
+import type * as acp from "@agentclientprotocol/sdk"
 import { capitalize } from "radashi"
 
 export type ToolCallDisplay = {
@@ -50,18 +51,16 @@ export function resolveLabelForTitle(kind: string | undefined, title: string): s
  * Extract display info from an ACP tool_call event.
  * Uses standard ACP fields by default, with targeted fixes for Claude Code quirks.
  */
-export function extractToolCallDisplay(update: Record<string, unknown>): ToolCallDisplay {
-  let title = update.title as string | undefined
-  const kind = update.kind as string | undefined
+export function extractToolCallDisplay(update: acp.ToolCall): ToolCallDisplay {
+  let title: string | undefined = update.title
+  const kind = update.kind
 
   // Claude Code-specific fixes
-  const meta = update._meta as Record<string, unknown> | undefined
-  const claudeCode = meta?.claudeCode as Record<string, unknown> | undefined
+  const claudeCode = update._meta?.claudeCode as Record<string, unknown> | undefined
   const toolName = claudeCode?.toolName as string | undefined
 
   if (toolName === "Read") {
-    const locations = update.locations as Array<Record<string, unknown>> | undefined
-    const path = locations?.[0]?.path as string | undefined
+    const path = update.locations?.[0]?.path
     if (path) {
       title = path
     }

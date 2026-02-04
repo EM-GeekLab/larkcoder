@@ -6,6 +6,14 @@ import { type Logger, createLarkLogger } from "../utils/logger"
 export type MessageHandler = (message: ParsedMessage) => Promise<void>
 export type CardActionHandler = (action: CardAction) => Promise<void>
 
+type IMMessageEventData = Parameters<NonNullable<Lark.EventHandles["im.message.receive_v1"]>>[0]
+
+type CardActionEventData = {
+  operator?: { open_id?: string }
+  action?: { value?: Record<string, string>; form_value?: Record<string, string> }
+  context?: { open_message_id?: string; open_chat_id?: string }
+}
+
 export class LarkEventHandler {
   private messageHandler?: MessageHandler
   private cardActionHandler?: CardActionHandler
@@ -25,11 +33,8 @@ export class LarkEventHandler {
       logger: createLarkLogger("lark-event"),
       loggerLevel: Lark.LoggerLevel.error,
     }).register({
-      "im.message.receive_v1": async (data: Record<string, unknown>) => {
-        const header = data.header as Record<string, unknown> | undefined
-        const eventId = (header?.event_id ?? (data as Record<string, unknown>).event_id) as
-          | string
-          | undefined
+      "im.message.receive_v1": async (data) => {
+        const eventId = data.event_id
 
         // Event dedup
         if (eventId) {
@@ -65,7 +70,7 @@ export class LarkEventHandler {
         }
       },
 
-      "card.action.trigger": async (data: Record<string, unknown>) => {
+      "card.action.trigger": async (data: CardActionEventData) => {
         const action = this.parseCardAction(data)
         if (action) {
           this.logger
@@ -88,27 +93,19 @@ export class LarkEventHandler {
     })
   }
 
-  private parseIMMessage(data: Record<string, unknown>): ParsedMessage | null {
-    const sender = data.sender as Record<string, unknown> | undefined
-    const senderId = sender?.sender_id as Record<string, string> | undefined
-    const message = data.message as Record<string, unknown> | undefined
+  private parseIMMessage(data: IMMessageEventData): ParsedMessage | null {
+    const { sender, message } = data
 
-    if (!message) {
-      return null
-    }
-
-    const messageType = message.message_type as string
-    if (messageType !== "text") {
-      this.logger.info(`Ignoring non-text message: ${messageType}`)
+    if (message.message_type !== "text") {
+      this.logger.info(`Ignoring non-text message: ${message.message_type}`)
       return null
     }
 
     const chatType = message.chat_type as "p2p" | "group"
-    const contentStr = message.content as string
     let text = ""
 
     try {
-      const content = JSON.parse(contentStr) as Record<string, string>
+      const content = JSON.parse(message.content) as Record<string, string>
       text = content.text ?? ""
     } catch {
       this.logger.warn("Failed to parse message content")
@@ -117,7 +114,7 @@ export class LarkEventHandler {
 
     // In group chats, strip @mention prefix
     if (chatType === "group") {
-      const mentions = message.mentions as Array<Record<string, unknown>> | undefined
+      const mentions = message.mentions
       if (!mentions || mentions.length === 0) {
         // Not mentioned, ignore in group
         return null
@@ -131,30 +128,27 @@ export class LarkEventHandler {
     }
 
     return {
-      messageId: message.message_id as string,
-      chatId: message.chat_id as string,
+      messageId: message.message_id,
+      chatId: message.chat_id,
       chatType,
-      senderId: senderId?.open_id ?? "",
-      rootId: (message.root_id as string) || undefined,
+      senderId: sender.sender_id?.open_id ?? "",
+      rootId: message.root_id || undefined,
       text,
     }
   }
 
-  private parseCardAction(data: Record<string, unknown>): CardAction | null {
-    const operator = data.operator as Record<string, string> | undefined
-    const action = data.action as Record<string, unknown> | undefined
-    const context = data.context as Record<string, string> | undefined
-    const value = action?.value as Record<string, string> | undefined
-    const formValue = action?.form_value as Record<string, string> | undefined
+  private parseCardAction(data: CardActionEventData): CardAction | null {
+    const value = data.action?.value
+    const formValue = data.action?.form_value
 
     if (!value || !value.action) {
       return null
     }
 
     return {
-      openId: operator?.open_id ?? "",
-      openMessageId: context?.open_message_id ?? "",
-      openChatId: context?.open_chat_id ?? "",
+      openId: data.operator?.open_id ?? "",
+      openMessageId: data.context?.open_message_id ?? "",
+      openChatId: data.context?.open_chat_id ?? "",
       action: value.action,
       sessionId: value.session_id,
       optionId: value.option_id,

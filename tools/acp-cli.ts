@@ -2,6 +2,7 @@ import * as acp from "@agentclientprotocol/sdk"
 import { spawn } from "node:child_process"
 import * as readline from "node:readline"
 import { Readable, Writable } from "node:stream"
+import { extractErrorMessage } from "../src/utils/errors"
 
 const DIM = "\x1b[2m"
 const RESET = "\x1b[0m"
@@ -45,33 +46,22 @@ async function main(): Promise<void> {
 
   const client: acp.Client = {
     async sessionUpdate(params) {
-      const update = params.update as Record<string, unknown> | undefined
-      if (!update) {
-        return
-      }
-      const updateType = update.sessionUpdate as string | undefined
-      switch (updateType) {
+      const update = params.update
+      switch (update.sessionUpdate) {
         case "agent_message_chunk": {
-          const content = update.content as { type: string; text?: string } | undefined
-          if (content?.type === "text" && content.text) {
-            process.stdout.write(content.text)
+          if (update.content.type === "text") {
+            process.stdout.write(update.content.text)
           }
           break
         }
         case "agent_thought_chunk": {
-          const content = update.content as { type: string; text?: string } | undefined
-          if (content?.type === "text" && content.text) {
-            process.stdout.write(`${DIM}${content.text}${RESET}`)
+          if (update.content.type === "text") {
+            process.stdout.write(`${DIM}${update.content.text}${RESET}`)
           }
           break
         }
         case "tool_call": {
-          const title = (update.title as string) ?? "unknown"
-          console.log(`\n[tool] ${title}`)
-          break
-        }
-        case "tool_result": {
-          console.log("[tool result]")
+          console.log(`\n[tool] ${update.title}`)
           break
         }
       }
@@ -128,16 +118,7 @@ async function main(): Promise<void> {
         })
         console.log(`\n[stop: ${result.stopReason}]\n`)
       } catch (error: unknown) {
-        const msg =
-          error instanceof Error
-            ? error.message
-            : typeof error === "object" &&
-                error !== null &&
-                "message" in error &&
-                typeof (error as Record<string, unknown>).message === "string"
-              ? ((error as Record<string, unknown>).message as string)
-              : String(error)
-        console.error(`\nError: ${msg}\n`)
+        console.error(`\nError: ${extractErrorMessage(error)}\n`)
       }
 
       promptUser()

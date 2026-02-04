@@ -37,10 +37,9 @@ export class ClientBridge implements acp.Client {
   }
 
   async sessionUpdate(params: acp.SessionNotification): Promise<void> {
-    const updateType = (params.update as Record<string, unknown> | undefined)?.sessionUpdate as
-      | string
-      | undefined
-    this.logger.withMetadata({ updateType }).trace("ClientBridge received session update")
+    this.logger
+      .withMetadata({ updateType: params.update.sessionUpdate })
+      .trace("ClientBridge received session update")
     await this.onSessionUpdateCallback?.(params)
   }
 

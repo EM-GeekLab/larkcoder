@@ -249,17 +249,9 @@ export class ProjectHandler {
         process: child,
         logger: this.logger,
         onSessionUpdate: async (params) => {
-          const update = params.update as Record<string, unknown> | undefined
-          if (!update) {
-            return
-          }
-          const updateType = update.sessionUpdate as string | undefined
-          if (updateType === "agent_message_chunk") {
-            const content = update.content as Record<string, unknown> | undefined
-            const text = content?.text as string | undefined
-            if (text) {
-              responseText += text
-            }
+          const update = params.update
+          if (update.sessionUpdate === "agent_message_chunk" && update.content.type === "text") {
+            responseText += update.content.text
           }
         },
       })

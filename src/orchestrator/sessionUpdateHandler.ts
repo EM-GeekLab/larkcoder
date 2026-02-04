@@ -20,26 +20,20 @@ export class SessionUpdateHandler {
   async handleSessionUpdate(sessionId: string, params: acp.SessionNotification): Promise<void> {
     await this.withSessionLock(sessionId, async () => {
       const update = params.update
-      if (!update) {
-        return
-      }
 
-      const updateType = (update as Record<string, unknown>).sessionUpdate as string | undefined
-
-      this.logger.withMetadata({ sessionId, updateType }).trace("Session update received")
+      this.logger
+        .withMetadata({ sessionId, updateType: update.sessionUpdate })
+        .trace("Session update received")
 
       const active = this.getActiveSession(sessionId)
       if (!active) {
         return
       }
 
-      switch (updateType) {
+      switch (update.sessionUpdate) {
         case "agent_message_chunk": {
-          const content = (update as Record<string, unknown>).content as
-            | Record<string, unknown>
-            | undefined
-          const text = content?.text as string | undefined
-          if (text) {
+          if (update.content.type === "text") {
+            const text = update.content.text
             this.logger
               .withMetadata({ sessionId, textLength: text.length })
               .trace("Agent message chunk")
@@ -53,7 +47,7 @@ export class SessionUpdateHandler {
           break
         }
         case "current_mode_update": {
-          const modeId = (update as Record<string, unknown>).currentModeId as string | undefined
+          const modeId = update.currentModeId
           if (modeId) {
             this.logger.withMetadata({ sessionId, modeId }).trace("Mode update")
             active.currentMode = modeId
@@ -62,15 +56,12 @@ export class SessionUpdateHandler {
           break
         }
         case "available_commands_update": {
-          const commands = (update as Record<string, unknown>).availableCommands as
-            | Array<{ name: string }>
-            | undefined
-          active.availableCommands = commands?.map((c) => c.name) ?? []
+          active.availableCommands = update.availableCommands.map((c) => c.name)
           break
         }
         case "tool_call": {
-          const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
-          const display = extractToolCallDisplay(update as Record<string, unknown>)
+          const { toolCallId } = update
+          const display = extractToolCallDisplay(update)
           const { title, kind, label } = display
           this.logger
             .withMetadata({ sessionId, toolCallId, tool: title, kind })
@@ -143,11 +134,8 @@ export class SessionUpdateHandler {
           break
         }
         case "agent_thought_chunk": {
-          const content = (update as Record<string, unknown>).content as
-            | Record<string, unknown>
-            | undefined
-          const text = content?.text as string | undefined
-          if (text) {
+          if (update.content.type === "text") {
+            const text = update.content.text
             this.logger
               .withMetadata({ sessionId, textLength: text.length })
               .trace("Agent thought chunk")
@@ -161,9 +149,7 @@ export class SessionUpdateHandler {
           break
         }
         case "plan": {
-          const entries = (update as Record<string, unknown>).entries as
-            | Array<{ content: string; priority: string; status: string }>
-            | undefined
+          const { entries } = update
           if (entries) {
             active.currentPlan = entries.map((e) => ({
               content: e.content,
@@ -175,11 +161,9 @@ export class SessionUpdateHandler {
           break
         }
         case "config_option_update": {
-          const configOptions = (update as Record<string, unknown>).configOptions as
-            | unknown[]
-            | undefined
+          const { configOptions } = update
           if (configOptions) {
-            active.configOptions = configOptions as typeof active.configOptions
+            active.configOptions = configOptions
             this.logger
               .withMetadata({ sessionId, optionCount: configOptions.length })
               .trace("Config options update")
@@ -187,7 +171,7 @@ export class SessionUpdateHandler {
           break
         }
         case "session_info_update": {
-          const title = (update as Record<string, unknown>).title as string | undefined | null
+          const { title } = update
           if (title != null) {
             active.sessionTitle = title
             this.logger.withMetadata({ sessionId, title }).trace("Session info update")
@@ -198,10 +182,7 @@ export class SessionUpdateHandler {
           break
         }
         case "tool_call_update": {
-          const toolCallId = (update as Record<string, unknown>).toolCallId as string | undefined
-          const status = (update as Record<string, unknown>).status as string | undefined
-          const newTitle = (update as Record<string, unknown>).title as string | undefined | null
-          const newKind = (update as Record<string, unknown>).kind as string | undefined | null
+          const { toolCallId, status, title: newTitle, kind: newKind } = update
           this.logger
             .withMetadata({ sessionId, toolCallId, status, title: newTitle, kind: newKind })
             .debug("Agent tool call update")

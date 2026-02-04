@@ -1,14 +1,18 @@
+function hasMessage(value: unknown): value is { message: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "message" in value &&
+    typeof (value as { message: unknown }).message === "string"
+  )
+}
+
 export function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message
   }
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as Record<string, unknown>).message === "string"
-  ) {
-    return (error as Record<string, unknown>).message as string
+  if (hasMessage(error)) {
+    return error.message
   }
   return String(error)
 }
