@@ -22,17 +22,17 @@ function parseArgs(): { configPath?: string; init?: boolean; help?: boolean } {
 }
 
 function showHelp(): void {
-  console.log(`LarkCoder - 通过飞书 IM 消息控制 ACP 兼容的 Coding Agent
+  console.log(`LarkCoder - Control ACP-compatible Coding Agents via Lark/Feishu IM
 
-用法:
-  bunx --bun larkcoder [选项]
+Usage:
+  bunx --bun larkcoder [options]
 
-选项:
-  -c, --config <path>  指定配置文件路径 (默认: config.yaml)
-  -i, --init           初始化配置文件（从模板创建）
-  -h, --help           显示帮助信息
+Options:
+  -c, --config <path>  Specify config file path (default: config.yaml)
+  -i, --init           Initialize config file from template
+  -h, --help           Show help message
 
-示例:
+Examples:
   bunx --bun larkcoder --init
   bunx --bun larkcoder --config ./my-config.yaml
   bunx --bun larkcoder
@@ -41,14 +41,16 @@ function showHelp(): void {
 
 function initConfig(configPath: string): void {
   if (existsSync(configPath)) {
-    console.error(`错误: 配置文件已存在: ${configPath}`)
+    console.error(`Error: Config file already exists: ${configPath}`)
     process.exit(1)
   }
 
   const exampleContent = getExampleConfig()
   writeFileSync(configPath, exampleContent, "utf8")
-  console.log(`✓ 已创建配置文件: ${configPath}`)
-  console.log(`请编辑配置文件并填写飞书应用凭据，然后重新运行。`)
+  console.log(`Config file created: ${configPath}`)
+  console.log(
+    `Please edit the config file and fill in your Lark/Feishu app credentials, then run again.`,
+  )
 }
 
 async function main(): Promise<void> {
@@ -67,8 +69,8 @@ async function main(): Promise<void> {
   }
 
   if (!existsSync(configPath)) {
-    console.error(`错误: 配置文件不存在: ${configPath}`)
-    console.error(`提示: 使用 --init 选项从模板创建配置文件`)
+    console.error(`Error: Config file not found: ${configPath}`)
+    console.error(`Hint: Use --init option to create config file from template`)
     process.exit(1)
   }
 

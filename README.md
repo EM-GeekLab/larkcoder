@@ -1,141 +1,149 @@
 # LarkCoder
 
-通过飞书 IM 消息控制 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) 等 ACP 兼容的 Coding Agent，在远程服务器上完成编码工作。
+[中文](README.zh.md) | **English**
 
-## 功能
+Control [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) and other ACP-compatible Coding Agents via Lark/Feishu IM messages to complete coding tasks on remote servers.
 
-- **飞书对话驱动** — 在飞书聊天中直接向 ACP 兼容的 Coding Agent 发送编码指令，支持私聊和群组
-- **Shell 命令执行** — 使用 `!` 前缀在会话工作目录中执行 shell 命令，支持实时流式输出
-- **流式输出** — 通过飞书交互式卡片实时展示 Agent 的输出内容和工具调用过程
-- **多会话管理** — 每个对话/话题独立维护会话，支持创建、恢复、切换和删除
-- **项目管理** — 支持创建、切换、编辑项目，每个项目拥有独立的工作目录和会话空间
-- **权限确认** — Agent 执行敏感操作时弹出确认卡片，由用户选择是否允许
-- **模型切换** — 在飞书中随时切换 Claude 模型
+## Features
 
-## 前置条件
+- **Lark/Feishu Conversation Driven** — Send coding instructions directly to ACP-compatible Coding Agents in Lark/Feishu chat, supporting both private chats and groups
+- **Shell Command Execution** — Execute shell commands in session working directory using `!` prefix with real-time streaming output
+- **Streaming Output** — Display Agent output and tool calls in real-time via Lark/Feishu interactive cards
+- **Multi-Session Management** — Each conversation/thread maintains independent sessions, supporting create, resume, switch, and delete operations
+- **Project Management** — Create, switch, and edit projects, each with independent working directory and session space
+- **Permission Confirmation** — Interactive confirmation cards when Agent performs sensitive operations
+- **Model Switching** — Switch Claude models anytime in Lark/Feishu
 
-- [Bun](https://bun.sh) 运行时
-- [Claude Code ACP Server](https://www.npmjs.com/package/@zed-industries/claude-code-acp)（需先安装：`npm install -g @zed-industries/claude-code-acp`，确保 `claude-code-acp` 命令可用；也可使用其他兼容的 ACP，通过修改配置文件即可）
-- 飞书开放平台应用（需开启消息接收和卡片回调事件）
+## Prerequisites
 
-## 快速开始
+- [Bun](https://bun.sh) runtime
+- [Claude Code ACP Server](https://www.npmjs.com/package/@zed-industries/claude-code-acp) (install first: `npm install -g @zed-industries/claude-code-acp`, ensure `claude-code-acp` command is available; other compatible ACP servers can be used by modifying the config)
+- Lark/Feishu Open Platform app (with message receiving and card callback events enabled)
 
-### 方式一：使用 bunx（推荐）
+## Quick Start
 
-直接通过 `bunx` 运行，无需克隆项目：
+### Option 1: Using bunx (Recommended)
+
+Run directly via `bunx` without cloning the project:
 
 ```bash
-# 初始化配置文件
+# Initialize config file
 bunx --bun larkcoder --init
 
-# 编辑配置文件，填写飞书应用凭据
-# 编辑 config.yaml
+# Edit config file and fill in Lark/Feishu app credentials
+# Edit config.yaml
 
-# 启动服务
+# Start service
 bunx --bun larkcoder
 ```
 
-### 方式二：本地开发
+### Option 2: Local Development
 
 ```bash
-# 克隆项目
+# Clone project
 git clone <repo-url> && cd larkcoder
 
-# 安装依赖
+# Install dependencies
 bun install
 
-# 初始化配置文件（使用 CLI）
+# Initialize config file (using CLI)
 bun run start -- --init
-# 或直接运行
+# Or run directly
 bun bin/larkcoder.ts --init
 
-# 编辑配置文件，填写飞书应用凭据
-# 编辑 config.yaml
+# Edit config file and fill in Lark/Feishu app credentials
+# Edit config.yaml
 
-# 启动服务（使用 CLI，推荐用于本地调试）
+# Start service (using CLI, recommended for local debugging)
 bun run start
-# 或直接运行
+# Or run directly
 bun bin/larkcoder.ts
 
-# 或使用开发模式（直接运行 src/index.ts，使用环境变量 CONFIG_PATH）
+# Or use dev mode (run src/index.ts directly, uses CONFIG_PATH env var)
 bun run dev
 ```
 
-也可以直接运行启动脚本，它会自动完成依赖安装和数据库迁移：
+You can also run the startup script directly, which will automatically install dependencies and run database migrations:
 
 ```bash
 ./start.sh
 ```
 
-**本地调试提示**：
+**Local Debugging Tips**:
 
-- 使用 `bun run start` 或 `bun bin/larkcoder.ts` 可以像 `bunx --bun larkcoder` 一样使用 CLI 功能（如 `--init`、`--config` 等），但运行的是本地代码，方便调试和修改
-- 使用 `bun run dev` 直接运行 `src/index.ts`，适合快速启动（使用默认 `config.yaml` 或 `CONFIG_PATH` 环境变量）
+- Use `bun run start` or `bun bin/larkcoder.ts` to use CLI features (like `--init`, `--config`, etc.) just like `bunx --bun larkcoder`, but runs local code for easy debugging and modification
+- Use `bun run dev` to run `src/index.ts` directly for quick startup (uses default `config.yaml` or `CONFIG_PATH` env var)
 
-## 配置
+## Configuration
 
-### CLI 选项
+### CLI Options
 
 ```bash
-bunx --bun larkcoder [选项]
+bunx --bun larkcoder [options]
 
-选项:
-  -c, --config <path>  指定配置文件路径 (默认: config.yaml)
-  -i, --init           初始化配置文件（从模板创建）
-  -h, --help           显示帮助信息
+Options:
+  -c, --config <path>  Specify config file path (default: config.yaml)
+  -i, --init           Initialize config file from template
+  -h, --help           Show help message
 ```
 
-### 配置文件
+### Config File
 
-使用 `--init` 初始化后，编辑 `config.yaml`：
+After initializing with `--init`, edit `config.yaml`:
 
 ```yaml
 lark:
-  app_id: "cli_xxxxxx" # 飞书应用 App ID
-  app_secret: "your_app_secret" # 飞书应用 App Secret
-  stream_flush_interval: 150 # ms, 流式输出节流间隔
+  app_id: "cli_xxxxxx" # Lark/Feishu App ID
+  app_secret: "your_app_secret" # Lark/Feishu App Secret
+  stream_flush_interval: 150 # ms, streaming output throttle interval
 
 agent:
-  command: "claude-code-acp" # ACP 命令（可替换为其他兼容的 ACP）
-  args: [] # 命令参数
-  working_dir: "/path/to/work" # Agent 工作目录
+  command: "claude-code-acp" # ACP command (can be replaced with other compatible ACP)
+  args: [] # Command arguments
+  working_dir: "/path/to/work" # Agent working directory
 
 database:
-  path: "data/larkcoder.db" # 数据库文件路径
-  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天)
+  path: "data/larkcoder.db" # Database file path
+  event_max_age: 86400 # seconds, max event retention time (default 1 day)
 
 shell:
-  timeout: 300000 # ms，shell 命令超时时间（默认 5 分钟）
-  max_output: 100000 # bytes，最大输出大小（默认 100KB）
+  timeout: 300000 # ms, shell command timeout (default 5 minutes)
+  max_output: 100000 # bytes, max output size (default 100KB)
 ```
 
-> **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 和 `agent.args` 字段即可。
+> **Tip**: You can use other ACP-compatible Coding Agents by modifying the `agent.command` and `agent.args` fields.
 >
-> **Shell 配置**：`shell` 配置项为可选，不配置时使用默认值。
+> **Shell Config**: The `shell` config section is optional, defaults will be used if not configured.
 
-## 使用
+## Usage
 
-直接在飞书中发送消息即可与 Agent 对话。在群组中需要 @机器人。
+Send messages directly in Lark/Feishu to interact with the Agent. In groups, you need to @mention the bot.
 
-### 命令列表
+### Command List
 
-发送 `/help` 查看所有可用命令。常用命令：
+Send `/help` to see all available commands. Common commands:
 
-- `/new [prompt]` — 创建新会话
-- `/stop` — 停止 Agent
-- `/kill` — 终止 shell 命令
-- `/model` — 切换模型
-- `/project` — 项目管理
+- `/new [prompt]` — Create new session
+- `/stop` — Stop Agent
+- `/kill` — Kill running shell command
+- `/model` — Switch model
+- `/project` — Project management
 
-### Shell 命令执行
+### Shell Command Execution
 
-使用 `!` 前缀在会话的工作目录中执行 shell 命令：
+Use `!` prefix to execute shell commands in session's working directory:
 
 ```bash
 ! ls -la
 ! git status
 ! npm install
 ```
+
+- Real-time streaming output with automatic ANSI color code cleanup
+- Support for pipes, redirects, and full shell features
+- Timeout protection (default 5 minutes) and output limit (default 100KB)
+- Footer displays execution time and exit code (e.g., `5s · Exit: 0`)
+- Use `/kill` to terminate running command
 
 ## License
 
