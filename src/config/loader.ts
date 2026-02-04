@@ -1,9 +1,13 @@
-import { readFile } from "node:fs/promises"
+import { readFileSync } from "node:fs"
 import { parse as parseYaml } from "yaml"
 import { appConfigSchema, type AppConfig } from "./schema"
 
-export async function loadConfig(filePath: string): Promise<AppConfig> {
-  const rawText = await readFile(filePath, "utf8")
+export function loadConfig(filePath: string): AppConfig {
+  const rawText = readFileSync(filePath, "utf8")
   const raw: unknown = parseYaml(rawText)
-  return appConfigSchema.parse(raw)
+  const result = appConfigSchema.safeParse(raw)
+  if (!result.success) {
+    throw new Error(`Failed to load configuration: ${result.error.message}`)
+  }
+  return result.data
 }
