@@ -59,7 +59,7 @@ The keywords "MUST", "SHOULD", "MAY" in these guidelines are interpreted accordi
 
 ### Database
 
-- This project uses **Drizzle ORM** with **better-sqlite3** for database operations.
+- This project uses **Drizzle ORM** with **Bun SQLite** for database operations.
 - Schema changes workflow:
   1. Modify schema files in `src/db/schema/`
   2. Run `bun run db:generate` to generate migration files
