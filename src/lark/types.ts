@@ -2,7 +2,6 @@ export type LarkConfig = {
   appId: string
   appSecret: string
   docToken?: string
-  docType?: "docx" | "wiki"
 }
 
 export type ParsedMessage = {
