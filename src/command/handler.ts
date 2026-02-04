@@ -2,10 +2,12 @@ import type { LarkClient } from "../lark/client"
 import type { ParsedMessage } from "../lark/types"
 import type { Orchestrator } from "../orchestrator/orchestrator"
 import type { SessionService } from "../session/service"
+import type { Session } from "../session/types"
 import type { Logger } from "../utils/logger"
 import type { ParsedCommand } from "./parser"
 import type { ShellCommandHandler } from "./shellCommandHandler"
 import { buildPlanCard } from "../lark/cards/index"
+import { isPromptCommand, resolvePromptCommand, generatePromptCommandHelp } from "./promptCommands"
 
 const LOCAL_COMMANDS = new Set([
   "stop",
@@ -53,7 +55,8 @@ const HELP_TEXT = `Available commands:
 /project list — List and switch projects
 /project info — Show current project info
 /project edit — Edit current project
-/project exit — Exit current project (back to root)`
+/project exit — Exit current project (back to root)
+${generatePromptCommandHelp()}`
 
 export class CommandHandler {
   constructor(
@@ -63,6 +66,21 @@ export class CommandHandler {
     private logger: Logger,
     private shellCommandHandler: ShellCommandHandler,
   ) {}
+
+  private async requireSession(message: ParsedMessage): Promise<Session | null> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+    }
+    return session
+  }
+
+  private async replyBusy(message: ParsedMessage): Promise<void> {
+    await this.larkClient.replyMarkdownCard(
+      message.messageId,
+      "Agent is currently working. Please wait.",
+    )
+  }
 
   async handle(parsed: ParsedCommand, message: ParsedMessage, _threadId: string): Promise<void> {
     // Route shell commands
@@ -77,6 +95,8 @@ export class CommandHandler {
 
     if (LOCAL_COMMANDS.has(parsed.command)) {
       await this.handleLocal(parsed, message)
+    } else if (isPromptCommand(parsed.command)) {
+      await this.handlePromptCommand(parsed, message)
     } else {
       await this.handlePassthrough(parsed, message)
     }
@@ -151,9 +171,8 @@ export class CommandHandler {
   }
 
   private async handleStop(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
 
@@ -162,9 +181,8 @@ export class CommandHandler {
   }
 
   private async handleKill(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
 
@@ -196,9 +214,8 @@ export class CommandHandler {
   }
 
   private async handleTodo(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
 
@@ -212,9 +229,8 @@ export class CommandHandler {
   }
 
   private async handleSolo(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     const currentMode = this.orchestrator.getCurrentMode(session.id) ?? session.mode
@@ -223,9 +239,8 @@ export class CommandHandler {
   }
 
   private async handleMode(args: string, message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     if (!args) {
@@ -254,9 +269,8 @@ export class CommandHandler {
   }
 
   private async handleInfo(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No session found.")
       return
     }
 
@@ -300,27 +314,24 @@ export class CommandHandler {
   }
 
   private async handleModel(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     await this.orchestrator.handleModelSelect(session.id, message)
   }
 
   private async handleCommand(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     await this.orchestrator.handleCommandSelect(session.id, message)
   }
 
   private async handleConfig(message: ParsedMessage): Promise<void> {
-    const session = await this.orchestrator.resolveSession(message)
+    const session = await this.requireSession(message)
     if (!session) {
-      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
     await this.orchestrator.handleConfigSelect(session.id, message)
@@ -346,6 +357,30 @@ export class CommandHandler {
       message.messageId,
       "/project new — Create a new project\n/project list — List and switch projects\n/project info — Show current project info\n/project edit — Edit current project\n/project exit — Exit current project",
     )
+  }
+
+  private async handlePromptCommand(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
+    const result = resolvePromptCommand(parsed.command, parsed.args)
+    if (!result) {
+      return
+    }
+
+    if (result.type === "help") {
+      await this.larkClient.replyMarkdownCard(message.messageId, result.help)
+      return
+    }
+
+    const session = await this.requireSession(message)
+    if (!session) {
+      return
+    }
+
+    if (session.status === "running") {
+      await this.replyBusy(message)
+      return
+    }
+
+    await this.orchestrator.runInSession(session.id, result.prompt, message.messageId)
   }
 
   private async handlePassthrough(parsed: ParsedCommand, message: ParsedMessage): Promise<void> {
@@ -374,10 +409,7 @@ export class CommandHandler {
       if (session.status === "idle") {
         await this.orchestrator.runInSession(session.id, commandText, message.messageId)
       } else if (session.status === "running") {
-        await this.larkClient.replyMarkdownCard(
-          message.messageId,
-          "Agent is currently working. Please wait.",
-        )
+        await this.replyBusy(message)
       }
     } else {
       await this.larkClient.replyMarkdownCard(
