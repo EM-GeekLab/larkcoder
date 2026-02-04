@@ -82,13 +82,14 @@ function buildSelectorCard(items: SelectorItem[]): Record<string, unknown> {
 type ModelSelectCardData = {
   sessionId: string
   currentModel?: string
-  models: Array<{ modelId: string; label: string }>
+  models: Array<{ modelId: string; label: string; description?: string }>
 }
 
 export function buildModelSelectCard(data: ModelSelectCardData): Record<string, unknown> {
   return buildSelectorCard(
     data.models.map((m) => ({
       label: m.label,
+      description: m.description,
       isCurrent: data.currentModel ? m.modelId === data.currentModel : undefined,
       callbackValue: { action: "model_select", session_id: data.sessionId, model_id: m.modelId },
     })),
@@ -98,13 +99,14 @@ export function buildModelSelectCard(data: ModelSelectCardData): Record<string, 
 type ModeSelectCardData = {
   sessionId: string
   currentMode: string
-  modes: Array<{ modeId: string; label: string }>
+  modes: Array<{ modeId: string; label: string; description?: string }>
 }
 
 export function buildModeSelectCard(data: ModeSelectCardData): Record<string, unknown> {
   return buildSelectorCard(
     data.modes.map((m) => ({
       label: m.label,
+      description: m.description,
       isCurrent: m.modeId === data.currentMode,
       callbackValue: { action: "mode_select", session_id: data.sessionId, mode_id: m.modeId },
     })),
@@ -114,10 +116,15 @@ export function buildModeSelectCard(data: ModeSelectCardData): Record<string, un
 type ConfigOption = {
   id: string
   name: string
+  description?: string | null
   currentValue: string
   options:
-    | Array<{ value: string; name: string }>
-    | Array<{ group: string; name: string; options: Array<{ value: string; name: string }> }>
+    | Array<{ value: string; name: string; description?: string | null }>
+    | Array<{
+        group: string
+        name: string
+        options: Array<{ value: string; name: string; description?: string | null }>
+      }>
 }
 
 type ConfigSelectCardData = {
@@ -149,6 +156,7 @@ export function buildConfigSelectCard(data: ConfigSelectCardData): Record<string
     border_color: "grey",
     corner_radius: "8px",
     padding: "4px 12px 4px 12px",
+    vertical_spacing: c.description ? "0px" : undefined,
     behaviors: [
       {
         type: "callback",
@@ -180,6 +188,15 @@ export function buildConfigSelectCard(data: ConfigSelectCardData): Record<string
           },
         ],
       },
+      ...(c.description
+        ? [
+            {
+              tag: "markdown",
+              content: `<font color='grey'>${c.description}</font>`,
+              text_size: "notation",
+            },
+          ]
+        : []),
     ],
   }))
 
@@ -226,6 +243,7 @@ export function buildConfigValueSelectCard(
       for (const opt of item.options) {
         items.push({
           label: `${item.name} / ${opt.name}`,
+          description: opt.description ?? undefined,
           isCurrent: opt.value === data.currentValue,
           callbackValue: {
             action: "config_select",
@@ -238,6 +256,7 @@ export function buildConfigValueSelectCard(
     } else {
       items.push({
         label: item.name,
+        description: item.description ?? undefined,
         isCurrent: item.value === data.currentValue,
         callbackValue: {
           action: "config_select",

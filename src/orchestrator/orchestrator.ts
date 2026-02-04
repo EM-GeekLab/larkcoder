@@ -296,7 +296,11 @@ export class Orchestrator {
     const card = buildModelSelectCard({
       sessionId,
       currentModel: active?.currentModel,
-      models: models.map((m) => ({ modelId: m.modelId, label: m.name })),
+      models: models.map((m) => ({
+        modelId: m.modelId,
+        label: m.name,
+        description: m.description ?? undefined,
+      })),
     })
     await this.larkClient.replyCard(message.messageId, card)
   }
@@ -316,7 +320,11 @@ export class Orchestrator {
     const card = buildModeSelectCard({
       sessionId,
       currentMode: active?.currentMode ?? session.mode,
-      modes: modes.map((m) => ({ modeId: m.id, label: m.name })),
+      modes: modes.map((m) => ({
+        modeId: m.id,
+        label: m.name,
+        description: m.description ?? undefined,
+      })),
     })
     await this.larkClient.replyCard(message.messageId, card)
   }
@@ -582,7 +590,7 @@ export class Orchestrator {
 
     let acpSessionId: string
     let modelState: {
-      availableModels: Array<{ modelId: string; name: string }>
+      availableModels: Array<{ modelId: string; name: string; description?: string | null }>
       currentModelId: string
     } | null = null
     let modeState: {
