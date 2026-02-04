@@ -1,27 +1,27 @@
 {
   "name": "larkcoder",
   "version": "0.1.1",
-  "description": "Control ACP-compatible Coding Agents via Lark/Feishu IM messages",
   "private": false,
-  "author": "EM-GeekLab",
+  "description": "Control ACP-compatible Coding Agents via Lark/Feishu IM messages",
+  "keywords": [
+    "acp",
+    "ai-assistant",
+    "claude",
+    "claude-code",
+    "coding-agent",
+    "feishu",
+    "lark"
+  ],
+  "homepage": "https://github.com/EM-GeekLab/larkcoder#readme",
+  "bugs": {
+    "url": "https://github.com/EM-GeekLab/larkcoder/issues"
+  },
   "license": "MIT",
+  "author": "EM-GeekLab",
   "repository": {
     "type": "git",
     "url": "https://github.com/EM-GeekLab/larkcoder.git"
   },
-  "bugs": {
-    "url": "https://github.com/EM-GeekLab/larkcoder/issues"
-  },
-  "homepage": "https://github.com/EM-GeekLab/larkcoder#readme",
-  "keywords": [
-    "lark",
-    "feishu",
-    "claude",
-    "claude-code",
-    "acp",
-    "coding-agent",
-    "ai-assistant"
-  ],
   "bin": {
     "larkcoder": "./dist/larkcoder.js"
   },
@@ -62,6 +62,7 @@
     "drizzle-kit": "^0.31.8",
     "oxfmt": "^0.27.0",
     "oxlint": "^1.42.0",
+    "oxlint-tsgolint": "^0.11.4",
     "typescript": "^5.7.3"
   }
 }
