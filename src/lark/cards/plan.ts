@@ -86,6 +86,7 @@ export function buildPlanCard(entries: PlanEntry[]): Record<string, unknown> {
       update_multi: true,
     },
     body: {
+      vertical_spacing: "4px",
       elements: entries.map((entry) => buildPlanEntryElement(entry)),
     },
   }
