@@ -85,18 +85,26 @@ bunx --bun larkcoder [选项]
 
 ### 配置文件
 
-编辑 `config.yaml`（参考 `config.example.yaml`）：
+使用 `--init` 初始化后，编辑 `config.yaml`：
 
 ```yaml
 lark:
-  app_id: "cli_xxxxxx" # 飞书应用 App ID
-  app_secret: "your_app_secret" # 飞书应用 App Secret
+  app_id: "cli_xxxxxx"              # 飞书应用 App ID
+  app_secret: "your_app_secret"     # 飞书应用 App Secret
+  stream_flush_interval: 150        # ms, 流式输出节流间隔
 
 agent:
-  working_dir: "/path/to/work" # Agent 工作目录
+  command: "claude-code-acp"        # ACP 命令（可替换为其他兼容的 ACP）
+  args: []                          # 命令参数
+  working_dir: "/path/to/work"      # Agent 工作目录
+  max_turns: 50                     # 最大对话轮次
+
+database:
+  path: "data/larkcoder.db"         # 数据库文件路径
+  event_max_age: 86400              # 秒，事件最大保留时间（默认 1 天）
 ```
 
-> **提示**：可以使用兼容的 ACP，通过修改配置文件中的 `agent.command` 和 `agent.args` 字段即可。
+> **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 和 `agent.args` 字段即可。
 
 ## 使用
 
