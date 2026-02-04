@@ -59,7 +59,7 @@ export class ShellCommandHandler {
     // Execute command with streaming
     const shellProcess = this.shellExecutor.execute(
       command,
-      session.workingDir,
+      this.orchestrator.resolveWorkingDir(session.workingDir),
       this.timeout,
 
       // stdout handler

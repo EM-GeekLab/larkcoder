@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process"
 import { existsSync, mkdirSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Logger } from "../utils/logger"
 import type { AgentProcessInfo } from "./types"
@@ -33,6 +33,8 @@ export class ProcessManager {
     if (this.processes.has(sessionId)) {
       throw new Error(`Process already exists for session ${sessionId}`)
     }
+
+    workingDir = resolve(workingDir)
 
     if (!existsSync(workingDir)) {
       mkdirSync(workingDir, { recursive: true })

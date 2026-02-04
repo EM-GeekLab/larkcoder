@@ -1,4 +1,5 @@
 import type * as acp from "@agentclientprotocol/sdk"
+import { relative, resolve } from "node:path"
 import type { ProcessManager } from "../agent/processManager"
 import type { AppConfig } from "../config/schema"
 import type { LarkClient } from "../lark/client"
@@ -209,7 +210,7 @@ export class Orchestrator {
       threadId,
       creatorId: message.senderId,
       initialPrompt: message.text,
-      workingDir,
+      workingDir: relative(this.config.agent.workingDir, workingDir) || ".",
       docToken: this.config.lark.docToken,
       projectId,
     })
@@ -444,6 +445,10 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)
   }
 
+  resolveWorkingDir(sessionWorkingDir: string): string {
+    return resolve(this.config.agent.workingDir, sessionWorkingDir)
+  }
+
   getAvailableCommands(sessionId: string): acp.AvailableCommand[] {
     return this.activeSessions.get(sessionId)?.availableCommands ?? []
   }
@@ -612,7 +617,7 @@ export class Orchestrator {
     }
 
     if (!this.processManager.isAlive(session.id)) {
-      this.processManager.spawn(session.id, session.workingDir)
+      this.processManager.spawn(session.id, this.resolveWorkingDir(session.workingDir))
     }
 
     const child = this.processManager.getProcess(session.id)
@@ -656,7 +661,7 @@ export class Orchestrator {
       this.logger.withMetadata({ sessionId: session.id }).debug("Resuming ACP session")
       const resumeResponse = await acpClient.resumeSession({
         sessionId: session.acpSessionId,
-        cwd: session.workingDir,
+        cwd: this.resolveWorkingDir(session.workingDir),
       })
       acpSessionId = session.acpSessionId
       modelState = resumeResponse.models ?? null
@@ -665,7 +670,7 @@ export class Orchestrator {
     } else {
       this.logger.withMetadata({ sessionId: session.id }).debug("Creating new ACP session")
       const sessionResponse = await acpClient.newSession({
-        cwd: session.workingDir,
+        cwd: this.resolveWorkingDir(session.workingDir),
         mcpServers: [],
         _meta: systemPrompt ? { systemPrompt } : undefined,
       })

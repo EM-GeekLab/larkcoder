@@ -15,11 +15,10 @@ const rawConfigSchema = z.object({
     system_prompt: z.string().optional(),
   }),
 
-  database: z
-    .object({
-      path: z.string().min(1),
-      event_max_age: z.number().int().positive().default(86400),
-    }),
+  database: z.object({
+    path: z.string().min(1),
+    event_max_age: z.number().int().positive().default(86400),
+  }),
 
   shell: z
     .object({
