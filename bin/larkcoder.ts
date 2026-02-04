@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { getExampleConfig } from "./config-example.macro.ts" with { type: "macro" }
 import { start } from "../src/index"
+import { getExampleConfig } from "./config-example.macro.ts" with { type: "macro" }
 
 const DEFAULT_CONFIG_NAME = "config.yaml"
 

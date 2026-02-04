@@ -219,8 +219,17 @@ export class CommandHandler {
       return
     }
 
+    // Ensure ActiveSession is initialized to get complete session info including model
+    await this.orchestrator.ensureAgentSession(session)
+
     const modes = this.orchestrator.getAvailableModes(session.id)
     const modeDisplay = modes.find((m) => m.id === session.mode)?.name ?? session.mode
+
+    const currentModelId = this.orchestrator.getCurrentModel(session.id)
+    const availableModels = this.orchestrator.getAvailableModels(session.id)
+    const modelDisplay = currentModelId
+      ? (availableModels.find((m) => m.modelId === currentModelId)?.name ?? currentModelId)
+      : "N/A"
 
     const projectName = session.projectId
       ? await this.orchestrator.getProjectName(session.projectId)
@@ -231,6 +240,7 @@ export class CommandHandler {
       `Status: ${session.status}`,
       `Prompt: ${session.initialPrompt.slice(0, 100)}`,
       `Mode: ${modeDisplay}`,
+      `Model: ${modelDisplay}`,
       `Created: ${session.createdAt}`,
     ]
     if (projectName) {

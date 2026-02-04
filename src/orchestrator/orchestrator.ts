@@ -431,6 +431,14 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)?.currentMode
   }
 
+  getCurrentModel(sessionId: string): string | undefined {
+    return this.activeSessions.get(sessionId)?.currentModel
+  }
+
+  getAvailableModels(sessionId: string): Array<{ modelId: string; name: string }> {
+    return this.activeSessions.get(sessionId)?.availableModels ?? []
+  }
+
   getCurrentPlan(sessionId: string): PlanEntry[] | undefined {
     return this.activeSessions.get(sessionId)?.currentPlan
   }
@@ -536,7 +544,7 @@ export class Orchestrator {
     return parts.join("\n")
   }
 
-  private async ensureAgentSession(session: Session): Promise<void> {
+  async ensureAgentSession(session: Session): Promise<void> {
     const existing = this.activeSessions.get(session.id)
     if (existing) {
       return
