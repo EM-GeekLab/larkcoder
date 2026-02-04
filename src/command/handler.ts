@@ -34,7 +34,7 @@ const HELP_TEXT = `Available commands:
 /resume — Alias for /list
 /delete — Delete a session
 /stop — Stop the running agent
-/plan — Toggle plan mode
+/plan — Show current plan
 /solo — Toggle solo mode (bypass all permissions)
 /mode [name] — Show or switch mode (use /mode to see available modes)
 /info — Show current session info
@@ -165,9 +165,7 @@ export class CommandHandler {
       return
     }
 
-    const currentMode = this.orchestrator.getCurrentMode(session.id) ?? session.mode
-    const newMode = currentMode === "plan" ? "default" : "plan"
-    await this.switchMode(session.id, newMode, message.messageId)
+    await this.larkClient.replyMarkdownCard(message.messageId, "No plan available.")
   }
 
   private async handleSolo(message: ParsedMessage): Promise<void> {

@@ -465,6 +465,9 @@ export class Orchestrator {
         sessionId: active.acpSessionId,
         modeId,
       })
+      .then(() => {
+        active.currentMode = modeId
+      })
       .catch((error: unknown) => {
         this.logger
           .withError(error as Error)
