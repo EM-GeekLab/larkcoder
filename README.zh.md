@@ -1,6 +1,6 @@
 # LarkCoder
 
-**中文** | [English](README.md)
+[English](README.md) | **中文**
 
 通过飞书 IM 消息控制 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) 等 ACP 兼容的 Coding Agent，在远程服务器上完成编码工作。
 

@@ -1,6 +1,6 @@
 # LarkCoder
 
-[中文](README.zh.md) | **English**
+**English** | [中文](README.zh.md)
 
 Control [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) and other ACP-compatible Coding Agents via Lark/Feishu IM messages to complete coding tasks on remote servers.
 

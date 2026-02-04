@@ -1,50 +1,75 @@
 # LarkCoder
 
-通过飞书 IM 消息控制 Claude Code (ACP Server)，在远程服务器上完成编码工作。
+Control Claude Code (ACP Server) via Lark/Feishu IM messages to complete coding tasks on remote servers.
 
-## Agent 编码准则
+## Agent Coding Guidelines
 
-以下准则中，"MUST"、"SHOULD"、"MAY" 等关键词按 RFC 2119 解释。
+The keywords "MUST", "SHOULD", "MAY" in these guidelines are interpreted according to RFC 2119.
 
-### 通用
+### General
 
-- MUST 严格按用户需求执行，不得超出范围。
-- MUST NOT 猜测或假设上下文中不存在的信息；不确定时应向用户确认。
+- MUST strictly follow user requirements without exceeding scope.
+- MUST NOT guess or assume information not present in context; confirm with user when uncertain.
 
-### 工具使用
+### Tool Usage
 
-- MUST 充分利用所有可用工具。
-- MCP 工具可用时 SHOULD 优先使用（如 `mcp__filesystem__list_directory` 优于 `ls`）。
-- `bash` 等命令执行工具仅在其他工具无法完成时使用。
+- MUST make full use of all available tools.
+- SHOULD prioritize MCP tools when available (e.g., `mcp__filesystem__list_directory` over `ls`).
+- Command execution tools like `bash` should only be used when other tools cannot complete the task.
 
-### 代码编辑
+### Code Editing
 
-- SHOULD 仅在关键的地方写注释，解释为什么而不是做什么
-- SHOULD NOT 大面积写注释
-- SHOULD NOT 编辑 linter/formatter 等编码标准配置文件，必须修改时须用户确认。
-- MUST NOT 编辑项目外文件（`/tmp` 等临时目录除外）。
+- SHOULD only write comments at critical points, explaining why rather than what
+- SHOULD NOT write extensive comments
+- SHOULD NOT edit linter/formatter config files; user confirmation required if modification is necessary.
+- MUST NOT edit files outside the project (except temporary directories like `/tmp`).
 
-### 代码检查
+### Code Checking
 
-- 运行时 MUST 使用 `bun run` 执行 `package.json` 中定义的 scripts：
-  - `bun run check` — 类型检查（tsc --noEmit）
-  - `bun run lint` — Lint 检查（oxlint）
-  - `bun run lint:fix` — Lint 自动修复
-  - `bun run fmt` — 格式化（oxfmt）
-  - `bun run fmt:check` — 格式化检查
-  - `CLAUDECODE=1 bun run test` — 单元测试
+- Runtime MUST use `bun run` to execute scripts defined in `package.json`:
+  - `bun run check` — Type checking (tsc --noEmit)
+  - `bun run lint` — Lint checking (oxlint)
+  - `bun run lint:fix` — Auto-fix linting issues
+  - `bun run fmt` — Format code (oxfmt)
+  - `bun run fmt:check` — Check formatting
+  - `CLAUDECODE=1 bun run test` — Run unit tests (when applicable)
 
-### 代码分析
+### Code Analysis
 
-- SHOULD 频繁检查 LSP、linter、类型检查结果；每次编辑后应触发检查。
-- SHOULD 尽力修复所有 error/warning；无法修复时 MUST 停止并求助用户。
-- MUST NOT 通过以下方式绕过错误：
-  - 插入禁用注释或修改 linter 配置
-  - 使用 `as unknown as` 等类型强转绕过类型检查
-  - 擅自降级/替换/修改第三方依赖
+- SHOULD frequently check LSP, linter, and type checker results; trigger checks after each edit.
+- SHOULD make every effort to fix all errors/warnings; MUST stop and ask user for help if unable to fix.
+- MUST NOT bypass errors through:
+  - Inserting disable comments or modifying linter config
+  - Using type assertions like `as unknown as` to bypass type checking
+  - Arbitrarily downgrading/replacing/modifying third-party dependencies
 
-### 文档获取
+### Documentation Retrieval
 
-- SHOULD 通过工具获取最新文档（`man`、context7 MCP、fetch 工具等）；常识性内容除外。
-- MUST NOT 使用 `curl` 等原始 HTTP 请求自行抓取网页。
-- 无法理解所用工具/库的用法时 MUST NOT 继续编码。
+- SHOULD retrieve latest documentation through tools (`man`, context7 MCP, fetch tools, etc.); common knowledge excepted.
+- MUST NOT use raw HTTP requests like `curl` to scrape web pages.
+- MUST NOT continue coding when unable to understand the usage of tools/libraries.
+
+## Project-Specific Guidelines
+
+### Runtime Environment
+
+- This project uses **Bun** as the runtime environment, not Node.js.
+- Prefer Bun-specific APIs when available (e.g., `Bun.stripANSI()` for ANSI code removal).
+- Use `bun` command instead of `npm` or `node` for all operations.
+
+### Database
+
+- This project uses **Drizzle ORM** with **better-sqlite3** for database operations.
+- Schema changes workflow:
+  1. Modify schema files in `src/db/schema/`
+  2. Run `bun run db:generate` to generate migration files
+  3. Restart program (migrations are automatically applied on startup)
+- MUST NOT directly modify database files or bypass the ORM layer.
+
+### Configuration
+
+- New configuration options MUST be added to both:
+  - Schema definition in `src/config/schema.ts`
+  - Example file in `config.example.yaml`
+- Configuration fields SHOULD have sensible defaults.
+- Configuration documentation MUST be updated in both README files (English and Chinese).
