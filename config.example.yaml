@@ -11,3 +11,7 @@ agent:
 database:
   path: "data/larkcoder.db"
   event_max_age: 86400 # seconds, default 1 day
+
+shell:
+  timeout: 300000 # ms, shell command timeout (default 5 minutes)
+  max_output: 100000 # bytes, max output size (default 100KB)

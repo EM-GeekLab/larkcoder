@@ -21,6 +21,13 @@ const rawConfigSchema = z.object({
       event_max_age: z.number().int().positive().default(86400),
     })
     .optional(),
+
+  shell: z
+    .object({
+      timeout: z.number().int().positive().default(300000), // 5 minutes
+      max_output: z.number().int().positive().default(100000), // 100KB
+    })
+    .optional(),
 })
 
 export type RawConfig = z.input<typeof rawConfigSchema>
@@ -42,6 +49,12 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
     path: raw.database?.path ?? "data/larkcoder.db",
     eventMaxAge: raw.database?.event_max_age ?? 86400,
   },
+  shell: raw.shell
+    ? {
+        timeout: raw.shell.timeout,
+        maxOutput: raw.shell.max_output,
+      }
+    : undefined,
 }))
 
 export type AppConfig = z.output<typeof appConfigSchema>

@@ -1,6 +1,7 @@
 import type * as acp from "@agentclientprotocol/sdk"
 import type { ThrottledFunction } from "radashi"
 import type { AgentClient } from "../agent/types"
+import type { ShellProcess } from "../command/shellExecutor"
 import type { CardAction } from "../lark/types"
 
 export const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000
@@ -76,6 +77,7 @@ export type ActiveSession = {
   permissionResolvers: Map<string, PermissionResolver>
   toolCallElements: Map<string, ToolCallElementInfo>
   cardSequences: Map<string, number>
+  shellProcess?: ShellProcess
 }
 
 export type SessionLockFn = <T>(sessionId: string, fn: () => Promise<T>) => Promise<T>

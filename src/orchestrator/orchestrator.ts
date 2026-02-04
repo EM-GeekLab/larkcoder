@@ -1,6 +1,5 @@
 import type * as acp from "@agentclientprotocol/sdk"
 import type { ProcessManager } from "../agent/processManager"
-import type { AgentClient } from "../agent/types"
 import type { AppConfig } from "../config/schema"
 import type { LarkClient } from "../lark/client"
 import type { DocService } from "../lark/docService"
@@ -13,6 +12,8 @@ import type { ActiveSession, PlanEntry } from "./types"
 import { createAcpClient } from "../agent/acpClient"
 import { CommandHandler } from "../command/handler"
 import { parseCommand } from "../command/parser"
+import { ShellCommandHandler } from "../command/shellCommandHandler"
+import { ShellExecutor } from "../command/shellExecutor"
 import {
   buildConfigSelectCard,
   buildModeSelectCard,
@@ -110,7 +111,25 @@ export class Orchestrator {
       },
     )
 
-    this.commandHandler = new CommandHandler(this, sessionService, larkClient, logger)
+    // Create shell executor and handler
+    const shellExecutor = new ShellExecutor(logger)
+    const shellCommandHandler = new ShellCommandHandler(
+      this,
+      sessionService,
+      larkClient,
+      shellExecutor,
+      this.streamingCardManager,
+      logger,
+      config.shell?.timeout ?? 300000, // 5 minutes default
+    )
+
+    this.commandHandler = new CommandHandler(
+      this,
+      sessionService,
+      larkClient,
+      logger,
+      shellCommandHandler,
+    )
   }
 
   async handleMessage(message: ParsedMessage): Promise<void> {
@@ -419,12 +438,8 @@ export class Orchestrator {
     }
   }
 
-  getActiveSession(sessionId: string): { client: AgentClient; acpSessionId: string } | undefined {
-    const session = this.activeSessions.get(sessionId)
-    if (!session) {
-      return undefined
-    }
-    return { client: session.client, acpSessionId: session.acpSessionId }
+  getActiveSession(sessionId: string): ActiveSession | undefined {
+    return this.activeSessions.get(sessionId)
   }
 
   getAvailableCommands(sessionId: string): string[] {

@@ -5,6 +5,7 @@
 ## 功能
 
 - **飞书对话驱动** — 在飞书聊天中直接向 ACP 兼容的 Coding Agent 发送编码指令，支持私聊和群组
+- **Shell 命令执行** — 使用 `!` 前缀在会话工作目录中执行 shell 命令，支持实时流式输出
 - **流式输出** — 通过飞书交互式卡片实时展示 Agent 的输出内容和工具调用过程
 - **多会话管理** — 每个对话/话题独立维护会话，支持创建、恢复、切换和删除
 - **项目管理** — 支持创建、切换、编辑项目，每个项目拥有独立的工作目录和会话空间
@@ -101,16 +102,40 @@ agent:
 
 database:
   path: "data/larkcoder.db" # 数据库文件路径
-  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天）
+  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天)
+
+shell:
+  timeout: 300000 # ms，shell 命令超时时间（默认 5 分钟）
+  max_output: 100000 # bytes，最大输出大小（默认 100KB）
 ```
 
 > **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 和 `agent.args` 字段即可。
+>
+> **Shell 配置**：`shell` 配置项为可选，不配置时使用默认值。
 
 ## 使用
 
 直接在飞书中发送消息即可与 Agent 对话。在群组中需要 @机器人。
 
-发送 `/help` 查看所有可用命令。
+### 命令列表
+
+发送 `/help` 查看所有可用命令。常用命令：
+
+- `/new [prompt]` — 创建新会话
+- `/stop` — 停止 Agent
+- `/kill` — 终止 shell 命令
+- `/model` — 切换模型
+- `/project` — 项目管理
+
+### Shell 命令执行
+
+使用 `!` 前缀在会话的工作目录中执行 shell 命令：
+
+```bash
+! ls -la
+! git status
+! npm install
+```
 
 ## License
 

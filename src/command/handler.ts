@@ -4,10 +4,12 @@ import type { Orchestrator } from "../orchestrator/orchestrator"
 import type { SessionService } from "../session/service"
 import type { Logger } from "../utils/logger"
 import type { ParsedCommand } from "./parser"
+import type { ShellCommandHandler } from "./shellCommandHandler"
 import { buildPlanCard } from "../lark/cards/index"
 
 const LOCAL_COMMANDS = new Set([
   "stop",
+  "kill",
   "new",
   "clear",
   "list",
@@ -27,6 +29,7 @@ const LOCAL_COMMANDS = new Set([
 
 const HELP_TEXT = `Available commands:
 /help — Show this help message
+! <command> — Execute shell command in session's working directory
 /new [prompt] — Create a new session (with optional initial prompt)
 /clear [prompt] — Alias for /new
 /list — List sessions (scoped to current project)
@@ -34,6 +37,7 @@ const HELP_TEXT = `Available commands:
 /resume — Alias for /list
 /delete — Delete a session
 /stop — Stop the running agent
+/kill — Kill running shell command
 /plan — Show current plan
 /solo — Toggle solo mode (bypass all permissions)
 /mode [name] — Show or switch mode (use /mode to see available modes)
@@ -53,9 +57,16 @@ export class CommandHandler {
     private sessionService: SessionService,
     private larkClient: LarkClient,
     private logger: Logger,
+    private shellCommandHandler: ShellCommandHandler,
   ) {}
 
   async handle(parsed: ParsedCommand, message: ParsedMessage, _threadId: string): Promise<void> {
+    // Route shell commands
+    if (parsed.type === "shell") {
+      await this.shellCommandHandler.execute(parsed.args, message)
+      return
+    }
+
     this.logger
       .withMetadata({ command: parsed.command, args: parsed.args })
       .info("Handling slash command")
@@ -75,6 +86,10 @@ export class CommandHandler {
 
       case "stop":
         await this.handleStop(message)
+        break
+
+      case "kill":
+        await this.handleKill(message)
         break
 
       case "new":
@@ -132,8 +147,27 @@ export class CommandHandler {
       await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
       return
     }
+
     await this.orchestrator.stopSession(session.id)
     await this.larkClient.replyMarkdownCard(message.messageId, "Session stopped.")
+  }
+
+  private async handleKill(message: ParsedMessage): Promise<void> {
+    const session = await this.orchestrator.resolveSession(message)
+    if (!session) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No active session found.")
+      return
+    }
+
+    const active = this.orchestrator.getActiveSession(session.id)
+    if (!active?.shellProcess) {
+      await this.larkClient.replyMarkdownCard(message.messageId, "No running shell command found.")
+      return
+    }
+
+    this.logger.info(`Killing shell process for session ${session.id}`)
+    active.shellProcess.kill()
+    await this.larkClient.replyMarkdownCard(message.messageId, "Shell command terminated.")
   }
 
   private async handleNew(args: string, message: ParsedMessage): Promise<void> {
