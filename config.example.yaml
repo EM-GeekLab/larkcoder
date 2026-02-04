@@ -7,7 +7,6 @@ agent:
   command: "claude-code-acp"
   args: []
   working_dir: "/home/deploy/projects"
-  max_turns: 50
 
 database:
   path: "data/larkcoder.db"

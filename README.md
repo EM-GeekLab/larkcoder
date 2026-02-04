@@ -97,7 +97,6 @@ agent:
   command: "claude-code-acp"        # ACP 命令（可替换为其他兼容的 ACP）
   args: []                          # 命令参数
   working_dir: "/path/to/work"      # Agent 工作目录
-  max_turns: 50                     # 最大对话轮次
 
 database:
   path: "data/larkcoder.db"         # 数据库文件路径
