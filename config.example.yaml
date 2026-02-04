@@ -5,12 +5,12 @@ lark:
 
 agent:
   command: "claude-code-acp"
-  args: []
-  working_dir: "/home/deploy/projects"
+  args: [] # optional
+  working_dir: ".larkcoder/projects"
 
 database:
-  path: "data/larkcoder.db"
-  event_max_age: 86400 # seconds, default 1 day
+  path: ".larkcoder/data/larkcoder.db"
+  event_max_age: 86400 # seconds, database event max age (default 1 day)
 
 shell:
   timeout: 300000 # ms, shell command timeout (default 5 minutes)

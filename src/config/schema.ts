@@ -17,10 +17,9 @@ const rawConfigSchema = z.object({
 
   database: z
     .object({
-      path: z.string().min(1).default("data/larkcoder.db"),
+      path: z.string().min(1),
       event_max_age: z.number().int().positive().default(86400),
-    })
-    .optional(),
+    }),
 
   shell: z
     .object({
@@ -46,8 +45,8 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
     systemPrompt: raw.agent.system_prompt,
   },
   database: {
-    path: raw.database?.path ?? "data/larkcoder.db",
-    eventMaxAge: raw.database?.event_max_age ?? 86400,
+    path: raw.database.path,
+    eventMaxAge: raw.database.event_max_age,
   },
   shell: raw.shell
     ? {

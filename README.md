@@ -103,7 +103,7 @@ agent:
   working_dir: "/path/to/work" # Agent working directory
 
 database:
-  path: "data/larkcoder.db" # Database file path
+  path: ".larkcoder/data/larkcoder.db" # Database file path
   event_max_age: 86400 # seconds, max event retention time (default 1 day)
 
 shell:

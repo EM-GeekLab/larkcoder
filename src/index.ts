@@ -18,7 +18,10 @@ export async function start(configPath: string): Promise<void> {
   logger.info("Starting LarkCoder...")
 
   // Load config
-  const config = await loadConfig(configPath)
+  const config = await loadConfig(configPath).catch((error) => {
+    logger.withError(error as Error).error("Failed to load configuration")
+    process.exit(1)
+  })
   logger.info(`Config loaded from ${configPath}`)
 
   // Ensure database directory exists
