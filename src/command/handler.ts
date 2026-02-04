@@ -223,13 +223,21 @@ export class CommandHandler {
     await this.orchestrator.ensureAgentSession(session)
 
     const modes = this.orchestrator.getAvailableModes(session.id)
-    const modeDisplay = modes.find((m) => m.id === session.mode)?.name ?? session.mode
+    const currentMode = modes.find((m) => m.id === session.mode)
+    const modeDisplay = currentMode?.name ?? session.mode
+    const modeWithDesc = currentMode?.description
+      ? `${modeDisplay} <font color='grey'>${currentMode.description}</font>`
+      : modeDisplay
 
     const currentModelId = this.orchestrator.getCurrentModel(session.id)
     const availableModels = this.orchestrator.getAvailableModels(session.id)
-    const modelDisplay = currentModelId
-      ? (availableModels.find((m) => m.modelId === currentModelId)?.name ?? currentModelId)
-      : "N/A"
+    const currentModel = currentModelId
+      ? availableModels.find((m) => m.modelId === currentModelId)
+      : undefined
+    const modelDisplay = currentModel?.name ?? currentModelId ?? "N/A"
+    const modelWithDesc = currentModel?.description
+      ? `${modelDisplay} <font color='grey'>${currentModel.description}</font>`
+      : modelDisplay
 
     const projectName = session.projectId
       ? await this.orchestrator.getProjectName(session.projectId)
@@ -239,8 +247,8 @@ export class CommandHandler {
       `Session: ${session.id}`,
       `Status: ${session.status}`,
       `Prompt: ${session.initialPrompt.slice(0, 100)}`,
-      `Mode: ${modeDisplay}`,
-      `Model: ${modelDisplay}`,
+      `Mode: ${modeWithDesc}`,
+      `Model: ${modelWithDesc}`,
       `Created: ${session.createdAt}`,
     ]
     if (projectName) {

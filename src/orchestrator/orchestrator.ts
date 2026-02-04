@@ -431,7 +431,9 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)?.availableCommands ?? []
   }
 
-  getAvailableModes(sessionId: string): Array<{ id: string; name: string }> {
+  getAvailableModes(
+    sessionId: string,
+  ): Array<{ id: string; name: string; description?: string | null }> {
     return this.activeSessions.get(sessionId)?.availableModes ?? []
   }
 
@@ -443,7 +445,9 @@ export class Orchestrator {
     return this.activeSessions.get(sessionId)?.currentModel
   }
 
-  getAvailableModels(sessionId: string): Array<{ modelId: string; name: string }> {
+  getAvailableModels(
+    sessionId: string,
+  ): Array<{ modelId: string; name: string; description?: string | null }> {
     return this.activeSessions.get(sessionId)?.availableModels ?? []
   }
 
