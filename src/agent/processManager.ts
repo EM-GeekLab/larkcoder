@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process"
+import { existsSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Logger } from "../utils/logger"
@@ -31,6 +32,11 @@ export class ProcessManager {
   spawn(sessionId: string, workingDir: string): AgentProcessInfo {
     if (this.processes.has(sessionId)) {
       throw new Error(`Process already exists for session ${sessionId}`)
+    }
+
+    if (!existsSync(workingDir)) {
+      mkdirSync(workingDir, { recursive: true })
+      this.logger.info(`Created working directory: ${workingDir}`)
     }
 
     const command = this.useMockAgent ? this.getMockAgentCommand() : this.command
