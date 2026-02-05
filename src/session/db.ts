@@ -1,8 +1,8 @@
-import { resolve } from "node:path"
 import { Database } from "bun:sqlite"
 import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
+import { resolve } from "node:path"
 import * as schema from "./schema"
 
 export type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>

@@ -1,7 +1,7 @@
 import * as Lark from "@larksuiteoapi/node-sdk"
 import type { SessionService } from "../session/service"
-import type { CardAction, ParsedMessage } from "./types"
 import type { Logger } from "../utils/logger"
+import type { CardAction, ParsedMessage } from "./types"
 import { createLarkLogger, getLarkLoggerLevel } from "./logger"
 
 export type MessageHandler = (message: ParsedMessage) => Promise<void>
