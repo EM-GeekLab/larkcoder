@@ -1,6 +1,6 @@
 {
   "name": "larkcoder",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "description": "Control ACP-compatible Coding Agents via Lark/Feishu IM messages",
   "keywords": [
@@ -33,7 +33,7 @@
   "scripts": {
     "dev": "NODE_ENV=development bun src/index.ts",
     "start": "bun bin/larkcoder.ts",
-    "build": "bun build bin/larkcoder.ts --outdir dist --target bun --sourcemap=linked --define 'process.env.NODE_ENV=\"production\"'",
+    "build": "bun build bin/larkcoder.ts --outdir dist --target bun --packages=external --sourcemap=linked --define 'process.env.NODE_ENV=\"production\"'",
     "prepublishOnly": "bun run build",
     "check": "tsc --noEmit",
     "lint": "oxlint",
