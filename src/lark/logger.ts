@@ -29,7 +29,7 @@ function formatArg(arg: unknown): string {
 
 function formatMsg(msg: unknown[]): string {
   return msg
-    .flatMap((arg) => (Array.isArray(arg) ? arg : [arg]))
+    .flatMap((arg): unknown[] => (Array.isArray(arg) ? arg : [arg]))
     .map(formatArg)
     .join(" ")
 }

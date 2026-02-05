@@ -35,7 +35,7 @@ export class ProjectRepository {
   }
 
   async findById(id: string): Promise<Project | null> {
-    const row = await this.db.select().from(projects).where(eq(projects.id, id)).get()
+    const row = this.db.select().from(projects).where(eq(projects.id, id)).get()
     return row ? rowToProject(row) : null
   }
 
@@ -48,7 +48,7 @@ export class ProjectRepository {
     if (limit) {
       query.limit(limit)
     }
-    const rows = await query.all()
+    const rows = query.all()
     return rows.map(rowToProject)
   }
 

@@ -255,7 +255,7 @@ class MockAgent implements acp.Agent {
     return `call_${++this.callCounter}`
   }
 
-  private sleep(ms: number, signal: AbortSignal): Promise<void> {
+  private async sleep(ms: number, signal: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) =>
       setTimeout(() => {
         if (signal.aborted) {

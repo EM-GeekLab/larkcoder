@@ -703,7 +703,7 @@ export class Orchestrator {
     }
   }
 
-  private withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+  private async withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
     const prev = this.sessionMutexes.get(sessionId) ?? Promise.resolve()
     let resolve!: () => void
     const next = new Promise<void>((r) => {

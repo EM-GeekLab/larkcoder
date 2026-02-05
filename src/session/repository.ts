@@ -1,7 +1,7 @@
-import { and, desc, eq, isNull, lt } from "drizzle-orm"
-import type { DrizzleDB } from "./db"
-import type { CreateSessionParams, Session, SessionStatus } from "./types"
-import { processedEvents, sessions } from "./schema"
+import { and, desc, eq, isNull, lt } from 'drizzle-orm'
+import type { DrizzleDB } from './db'
+import type { CreateSessionParams, Session, SessionStatus } from './types'
+import { processedEvents, sessions } from './schema'
 
 function rowToSession(row: typeof sessions.$inferSelect): Session {
   return {
@@ -35,12 +35,12 @@ export class SessionRepository {
       chatId: params.chatId,
       threadId: params.threadId,
       creatorId: params.creatorId,
-      status: "idle",
+      status: 'idle',
       initialPrompt: params.initialPrompt,
       workingDir: params.workingDir,
       docToken: params.docToken ?? null,
       projectId: params.projectId ?? null,
-      mode: "default",
+      mode: 'default',
       createdAt: now,
       updatedAt: now,
     })
@@ -48,12 +48,12 @@ export class SessionRepository {
   }
 
   async findById(id: string): Promise<Session | null> {
-    const row = await this.db.select().from(sessions).where(eq(sessions.id, id)).get()
+    const row = this.db.select().from(sessions).where(eq(sessions.id, id)).get()
     return row ? rowToSession(row) : null
   }
 
   async findByThreadId(threadId: string): Promise<Session | null> {
-    const row = await this.db
+    const row = this.db
       .select()
       .from(sessions)
       .where(eq(sessions.threadId, threadId))
@@ -64,7 +64,7 @@ export class SessionRepository {
   }
 
   async findMostRecentByChatId(chatId: string): Promise<Session | null> {
-    const row = await this.db
+    const row = this.db
       .select()
       .from(sessions)
       .where(eq(sessions.chatId, chatId))
@@ -83,7 +83,7 @@ export class SessionRepository {
     if (limit) {
       query.limit(limit)
     }
-    const rows = await query.all()
+    const rows = query.all()
     return rows.map(rowToSession)
   }
 
@@ -96,7 +96,7 @@ export class SessionRepository {
     if (limit) {
       query.limit(limit)
     }
-    const rows = await query.all()
+    const rows = query.all()
     return rows.map(rowToSession)
   }
 
@@ -109,7 +109,7 @@ export class SessionRepository {
     if (limit) {
       query.limit(limit)
     }
-    const rows = await query.all()
+    const rows = query.all()
     return rows.map(rowToSession)
   }
 
@@ -125,10 +125,7 @@ export class SessionRepository {
 
   async updateWorkingMessageId(id: string, workingMessageId: string | null): Promise<void> {
     const now = new Date().toISOString()
-    await this.db
-      .update(sessions)
-      .set({ workingMessageId, updatedAt: now })
-      .where(eq(sessions.id, id))
+    await this.db.update(sessions).set({ workingMessageId, updatedAt: now }).where(eq(sessions.id, id))
   }
 
   async touch(id: string): Promise<void> {
@@ -147,21 +144,14 @@ export class SessionRepository {
   }
 
   async isEventProcessed(eventId: string): Promise<boolean> {
-    const row = await this.db
-      .select()
-      .from(processedEvents)
-      .where(eq(processedEvents.eventId, eventId))
-      .get()
+    const row = this.db.select().from(processedEvents).where(eq(processedEvents.eventId, eventId)).get()
     return row !== undefined
   }
 
   async markEventProcessed(eventId: string): Promise<void> {
     await this.cleanOldEvents(this.eventMaxAgeMs)
     const now = new Date().toISOString()
-    await this.db
-      .insert(processedEvents)
-      .values({ eventId, processedAt: now })
-      .onConflictDoNothing()
+    await this.db.insert(processedEvents).values({ eventId, processedAt: now }).onConflictDoNothing()
   }
 
   async deleteById(id: string): Promise<void> {

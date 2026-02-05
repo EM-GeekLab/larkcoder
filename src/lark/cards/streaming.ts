@@ -76,29 +76,20 @@ export function buildStreamingThoughtElement(elementId: string): Record<string, 
   }
 }
 
+const iconTokenByKind: Record<string, string> = {
+  read: "file-link-otherfile_outlined",
+  edit: "edit_outlined",
+  delete: "delete-trash_outlined",
+  move: "viewinchat_outlined",
+  search: "search_outlined",
+  execute: "code_outlined",
+  think: "time_outlined",
+  fetch: "language_outlined",
+  switch_mode: "switch_outlined",
+}
+
 function iconTokenForKind(kind?: string): string {
-  switch (kind) {
-    case "read":
-      return "file-link-otherfile_outlined"
-    case "edit":
-      return "edit_outlined"
-    case "delete":
-      return "delete-trash_outlined"
-    case "move":
-      return "viewinchat_outlined"
-    case "search":
-      return "search_outlined"
-    case "execute":
-      return "code_outlined"
-    case "think":
-      return "time_outlined"
-    case "fetch":
-      return "language_outlined"
-    case "switch_mode":
-      return "switch_outlined"
-    default:
-      return "ellipse_outlined"
-  }
+  return (kind && iconTokenByKind[kind]) ?? "ellipse_outlined"
 }
 
 function buildToolCallMarkdown(

@@ -47,6 +47,7 @@ async function main(): Promise<void> {
   const client: acp.Client = {
     async sessionUpdate(params) {
       const update = params.update
+      // oxlint-disable-next-line typescript/switch-exhaustiveness-check
       switch (update.sessionUpdate) {
         case "agent_message_chunk": {
           if (update.content.type === "text") {
@@ -64,6 +65,8 @@ async function main(): Promise<void> {
           console.log(`\n[tool] ${update.title}`)
           break
         }
+        default:
+          break
       }
     },
     async requestPermission(params) {

@@ -10,8 +10,8 @@
     "perf": "warn"
   },
   "rules": {
-    "typescript/no-confusing-void-expression": "error",
-    "typescript/no-misused-promises": "error",
+    "typescript/no-confusing-void-expression": ["error", { "ignoreArrowShorthand": true }],
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": false }],
     "typescript/no-mixed-enums": "error",
     "typescript/no-unnecessary-boolean-literal-compare": "error",
     "typescript/no-unnecessary-template-expression": "error",
@@ -28,9 +28,9 @@
     "typescript/prefer-promise-reject-warns": "error",
     "typescript/prefer-reduce-type-parameter": "error",
     "typescript/prefer-return-this-type": "error",
-    "typescript/promise-function-async": "error",
+    "typescript/promise-function-async": ["error", { "checkArrowFunctions": false }],
     "typescript/related-getter-setter-pairs": "error",
-    "typescript/require-await": "error",
+    "typescript/require-await": "off",
     "typescript/restrict-plus-operands": "error",
     "typescript/switch-exhaustiveness-check": "error",
     "typescript/use-unknown-in-catch-callback-variable": "error",

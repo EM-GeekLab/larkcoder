@@ -1,15 +1,15 @@
-import type { ChildProcess } from "node:child_process"
-import * as acp from "@agentclientprotocol/sdk"
-import { Readable, Writable } from "node:stream"
-import type { Logger } from "../utils/logger"
+import type { ChildProcess } from 'node:child_process'
+import * as acp from '@agentclientprotocol/sdk'
+import { Readable, Writable } from 'node:stream'
+import type { Logger } from '../utils/logger'
 import type {
   AgentClient,
   PermissionRequestCallback,
   SessionUpdateCallback,
   ToolDefinition,
   ToolHandler,
-} from "./types"
-import { ClientBridge } from "./clientBridge"
+} from './types'
+import { ClientBridge } from './clientBridge'
 
 export type CreateAcpClientOptions = {
   process: ChildProcess
@@ -23,7 +23,7 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
   const { process: child, logger, onSessionUpdate, onPermissionRequest, tools } = options
 
   if (!child.stdin || !child.stdout) {
-    throw new Error("Agent process must have piped stdin and stdout")
+    throw new Error('Agent process must have piped stdin and stdout')
   }
 
   const bridge = new ClientBridge(logger)
@@ -48,7 +48,7 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
   return {
     async initialize() {
       return connection.initialize({
-        clientInfo: { name: "larkcoder", version: "0.1.0" },
+        clientInfo: { name: 'larkcoder', version: '0.1.0' },
         protocolVersion: acp.PROTOCOL_VERSION,
       })
     },
@@ -68,16 +68,10 @@ export function createAcpClient(options: CreateAcpClientOptions): AgentClient {
       return connection.setSessionMode(params)
     },
     async setSessionModel(params: { sessionId: string; modelId: string }) {
-      return (
-        (connection as unknown as Record<string, Function>).unstable_setSessionModel?.(params) ?? {}
-      )
+      return connection.unstable_setSessionModel(params)
     },
     async setSessionConfigOption(params: { sessionId: string; configId: string; value: string }) {
-      return (
-        (connection as unknown as Record<string, Function>).unstable_setSessionConfigOption?.(
-          params,
-        ) ?? {}
-      )
+      return connection.unstable_setSessionConfigOption(params)
     },
     get signal() {
       return connection.signal
