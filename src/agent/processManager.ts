@@ -7,22 +7,41 @@ import type { AgentProcessInfo } from "./types"
 
 export type ProcessManagerOptions = {
   command: string
+  args?: string[]
   logger: Logger
 }
 
 export class ProcessManager {
   private processes = new Map<string, { process: ChildProcess }>()
   private command: string
+  private args: string[]
   private logger: Logger
   private useMockAgent: boolean
 
   constructor(options: ProcessManagerOptions) {
-    this.command = options.command
     this.logger = options.logger
     this.useMockAgent = process.env.USE_MOCK_AGENT === "1" || process.env.USE_MOCK_AGENT === "true"
 
     if (this.useMockAgent) {
+      this.command = "bun"
+      this.args = [this.getMockAgentPath()]
       this.logger.warn("⚠️  Using MOCK AGENT - This is for testing only (USE_MOCK_AGENT is set)")
+      return
+    }
+
+    if (options.args) {
+      this.command = options.command
+      this.args = options.args
+    } else {
+      const [command = "", ...args] = options.command.trim().split(/\s+/)
+      this.command = command
+      this.args = args
+    }
+
+    if (!Bun.which(this.command)) {
+      throw new Error(
+        `Agent command not found: "${this.command}". Please install it or update the config.`,
+      )
     }
   }
 
@@ -38,17 +57,13 @@ export class ProcessManager {
       this.logger.info(`Created working directory: ${workingDir}`)
     }
 
-    const [command = "", ...args] = this.useMockAgent
-      ? ["bun", this.getMockAgentPath()]
-      : this.command.trim().split(/\s+/)
-
     if (this.useMockAgent) {
       this.logger.warn(`⚠️  Spawning MOCK AGENT for session ${sessionId} (cwd ${workingDir})`)
     } else {
-      this.logger.info(`Spawning agent: ${this.command} (cwd ${workingDir})`)
+      this.logger.info(`Spawning agent: ${this.command} ${this.args.join(" ")} (cwd ${workingDir})`)
     }
 
-    const child = spawn(command, args, {
+    const child = spawn(this.command, this.args, {
       cwd: workingDir,
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env },
