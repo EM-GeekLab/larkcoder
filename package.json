@@ -1,6 +1,6 @@
 {
   "name": "larkcoder",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "description": "Control ACP-compatible Coding Agents via Lark/Feishu IM messages",
   "keywords": [
