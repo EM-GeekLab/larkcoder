@@ -41,7 +41,6 @@ export async function start(configPath: string): Promise<void> {
   // Initialize process manager
   const processManager = new ProcessManager({
     command: config.agent.command,
-    args: config.agent.args,
     logger: createLogger({ prefix: "process" }),
   })
 

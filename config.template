@@ -5,7 +5,6 @@ lark:
 
 agent:
   command: "{{agent_command}}"
-  args: [] # optional
   working_dir: "{{working_dir}}"
 
 database:

@@ -4,8 +4,7 @@ lark:
   stream_flush_interval: 150 # ms, streaming output throttle interval
 
 agent:
-  command: "claude-code-acp"
-  args: [] # optional
+  command: "claude-code-acp" # supports appending args, e.g. "claude-code-acp --flag"
   working_dir: ".larkcoder/projects"
 
 database:

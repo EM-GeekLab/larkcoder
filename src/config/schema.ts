@@ -10,7 +10,6 @@ const rawConfigSchema = z.object({
 
   agent: z.object({
     command: z.string().min(1).default("claude-code-acp"),
-    args: z.array(z.string()).default([]),
     working_dir: z.string().min(1),
     system_prompt: z.string().optional(),
   }),
@@ -39,7 +38,6 @@ export const appConfigSchema = rawConfigSchema.transform((raw) => ({
   },
   agent: {
     command: raw.agent.command,
-    args: raw.agent.args,
     workingDir: raw.agent.working_dir,
     systemPrompt: raw.agent.system_prompt,
   },

@@ -7,20 +7,17 @@ import type { AgentProcessInfo } from "./types"
 
 export type ProcessManagerOptions = {
   command: string
-  args: string[]
   logger: Logger
 }
 
 export class ProcessManager {
   private processes = new Map<string, { process: ChildProcess }>()
   private command: string
-  private args: string[]
   private logger: Logger
   private useMockAgent: boolean
 
   constructor(options: ProcessManagerOptions) {
     this.command = options.command
-    this.args = options.args
     this.logger = options.logger
     this.useMockAgent = process.env.USE_MOCK_AGENT === "1" || process.env.USE_MOCK_AGENT === "true"
 
@@ -41,13 +38,14 @@ export class ProcessManager {
       this.logger.info(`Created working directory: ${workingDir}`)
     }
 
-    const command = this.useMockAgent ? this.getMockAgentCommand() : this.command
-    const args = this.useMockAgent ? this.getMockAgentArgs() : this.args
+    const [command = "", ...args] = this.useMockAgent
+      ? ["bun", this.getMockAgentPath()]
+      : this.command.trim().split(/\s+/)
 
     if (this.useMockAgent) {
       this.logger.warn(`⚠️  Spawning MOCK AGENT for session ${sessionId} (cwd ${workingDir})`)
     } else {
-      this.logger.info(`Spawning agent: ${command} ${args.join(" ")} (cwd ${workingDir})`)
+      this.logger.info(`Spawning agent: ${this.command} (cwd ${workingDir})`)
     }
 
     const child = spawn(command, args, {
@@ -104,16 +102,8 @@ export class ProcessManager {
     this.processes.clear()
   }
 
-  private getMockAgentCommand(): string {
-    // Use bun to run the TypeScript file directly
-    return "bun"
-  }
-
-  private getMockAgentArgs(): string[] {
-    // Get the path to mockAgent.ts relative to this file
-    const currentFile = fileURLToPath(import.meta.url)
-    const currentDir = dirname(currentFile)
-    const mockAgentPath = join(currentDir, "mockAgent.ts")
-    return [mockAgentPath]
+  private getMockAgentPath(): string {
+    const currentDir = dirname(fileURLToPath(import.meta.url))
+    return join(currentDir, "mockAgent.ts")
   }
 }
