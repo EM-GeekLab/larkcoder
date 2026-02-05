@@ -67,7 +67,7 @@ bunx --bun larkcoder [选项]
 选项:
   -c, --config <path>      指定配置文件路径 (默认: .larkcoder/config.yaml)
   -l, --log-level <level>  设置日志级别 (trace, debug, info, warn, error, fatal)
-  -i, --init               启动交互式配置向导
+  -i, --init               初始化或覆盖配置文件（交互式向导）
   -h, --help               显示帮助信息
 
 环境变量:

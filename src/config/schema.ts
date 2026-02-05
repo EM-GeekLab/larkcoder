@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const rawConfigSchema = z.object({
+export const rawConfigSchema = z.object({
   lark: z.object({
     app_id: z.string().min(1),
     app_secret: z.string().min(1),
@@ -9,7 +9,7 @@ const rawConfigSchema = z.object({
   }),
 
   agent: z.object({
-    command: z.string().min(1).default("claude-code-acp"),
+    command: z.string().min(1),
     working_dir: z.string().min(1),
     system_prompt: z.string().optional(),
   }),

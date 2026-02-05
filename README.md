@@ -67,7 +67,7 @@ bunx --bun larkcoder [options]
 Options:
   -c, --config <path>      Specify config file path (default: .larkcoder/config.yaml)
   -l, --log-level <level>  Set log level (trace, debug, info, warn, error, fatal)
-  -i, --init               Launch interactive setup wizard
+  -i, --init               Initialize or overwrite config file via setup wizard
   -h, --help               Show help message
 
 Environment Variables:
