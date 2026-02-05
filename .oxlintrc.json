@@ -32,7 +32,10 @@
     "typescript/related-getter-setter-pairs": "error",
     "typescript/require-await": "off",
     "typescript/restrict-plus-operands": "error",
-    "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      { "considerDefaultExhaustiveForUnions": true }
+    ],
     "typescript/use-unknown-in-catch-callback-variable": "error",
     "no-await-in-loop": "off",
     "import/no-default-export": "error",
