@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
-import { existsSync, mkdirSync, writeFileSync } from "node:fs"
-import { dirname, resolve } from "node:path"
+import { confirm, isCancel } from "@clack/prompts"
+import { existsSync } from "node:fs"
+import { resolve } from "node:path"
+import { runSetupWizard } from "../src/cli/setup"
 import { getConfigPath } from "../src/config/path"
 import { start } from "../src/index"
 import { type LogLevel, LOG_LEVELS, setLogLevel } from "../src/utils/logger"
-import { getExampleConfig } from "./config-example.macro.ts" with { type: "macro" }
 
 interface CliArgs {
   configPath?: string
@@ -64,21 +65,6 @@ Examples:
 `)
 }
 
-function initConfig(configPath: string): void {
-  if (existsSync(configPath)) {
-    console.error(`Error: Config file already exists: ${configPath}`)
-    process.exit(1)
-  }
-
-  mkdirSync(dirname(configPath), { recursive: true })
-  const exampleContent = getExampleConfig()
-  writeFileSync(configPath, exampleContent, "utf8")
-  console.log(`Config file created: ${configPath}`)
-  console.log(
-    `Please edit the config file and fill in your Lark/Feishu app credentials, then run again.`,
-  )
-}
-
 async function main(): Promise<void> {
   const args = parseArgs()
 
@@ -90,21 +76,29 @@ async function main(): Promise<void> {
   const configPath = resolve(args.configPath ?? getConfigPath())
 
   if (args.init) {
-    initConfig(configPath)
+    if (existsSync(configPath)) {
+      const overwrite = await confirm({
+        message: `Config file already exists: ${configPath}\nOverwrite with a new config?`,
+        initialValue: false,
+      })
+      if (isCancel(overwrite) || !overwrite) {
+        return
+      }
+    }
+    await runSetupWizard(configPath)
     return
   }
 
   // Apply log level: CLI flag > env var > default
   const envLogLevel = process.env.LOG_LEVEL
-  const logLevel = args.logLevel ?? (envLogLevel && isLogLevel(envLogLevel) ? envLogLevel : undefined)
+  const logLevel =
+    args.logLevel ?? (envLogLevel && isLogLevel(envLogLevel) ? envLogLevel : undefined)
   if (logLevel) {
     setLogLevel(logLevel)
   }
 
   if (!existsSync(configPath)) {
-    console.error(`Error: Config file not found: ${configPath}`)
-    console.error(`Hint: Use --init option to create config file from template`)
-    process.exit(1)
+    await runSetupWizard(configPath)
   }
 
   await start(configPath)

@@ -1,0 +1,17 @@
+lark:
+  app_id: "{{app_id}}"
+  app_secret: "{{app_secret}}"
+  stream_flush_interval: {{stream_flush_interval}} # ms, streaming output throttle interval
+
+agent:
+  command: "{{agent_command}}"
+  args: [] # optional
+  working_dir: "{{working_dir}}"
+
+database:
+  path: "{{db_path}}"
+  event_max_age: {{event_max_age}} # seconds, database event max age (default 1 day)
+
+shell:
+  timeout: 300000 # ms, shell command timeout (default 5 minutes)
+  max_output: 100000 # bytes, max output size (default 100KB)
