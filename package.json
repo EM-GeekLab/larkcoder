@@ -1,16 +1,20 @@
 {
   "name": "larkcoder",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": false,
   "description": "Control ACP-compatible Coding Agents via Lark/Feishu IM messages",
   "keywords": [
     "acp",
+    "agent-client-protocol",
     "ai-assistant",
-    "claude",
     "claude-code",
+    "codex",
     "coding-agent",
     "feishu",
-    "lark"
+    "gemini",
+    "github-copilot",
+    "lark",
+    "opencode"
   ],
   "homepage": "https://github.com/EM-GeekLab/larkcoder#readme",
   "bugs": {
