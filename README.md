@@ -27,14 +27,11 @@ Control [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude
 Run directly via `bunx` without cloning the project:
 
 ```bash
-# Initialize config file
-bunx --bun larkcoder --init
-
-# Edit config file and fill in Lark/Feishu app credentials
-# Edit .larkcoder/config.yaml
-
-# Start service
+# Start service (interactive setup wizard runs on first launch)
 bunx --bun larkcoder
+
+# Or explicitly initialize config file first
+bunx --bun larkcoder --init
 ```
 
 ### Option 2: Local Development
@@ -46,27 +43,13 @@ git clone <repo-url> && cd larkcoder
 # Install dependencies
 bun install
 
-# Initialize config file (using CLI)
-bun run start -- --init
-# Or run directly
-bun bin/larkcoder.ts --init
-
-# Edit config file and fill in Lark/Feishu app credentials
-# Edit .larkcoder/config.yaml
-
-# Start service (using CLI, recommended for local debugging)
+# Start service (interactive setup wizard runs on first launch)
 bun run start
 # Or run directly
 bun bin/larkcoder.ts
 
 # Or use dev mode (run src/index.ts directly, uses CONFIG_PATH env var)
 bun run dev
-```
-
-You can also run the startup script directly, which will automatically install dependencies and run database migrations:
-
-```bash
-./start.sh
 ```
 
 **Local Debugging Tips**:
@@ -84,7 +67,7 @@ bunx --bun larkcoder [options]
 Options:
   -c, --config <path>      Specify config file path (default: .larkcoder/config.yaml)
   -l, --log-level <level>  Set log level (trace, debug, info, warn, error, fatal)
-  -i, --init               Initialize config file from template
+  -i, --init               Launch interactive setup wizard
   -h, --help               Show help message
 
 Environment Variables:
@@ -94,7 +77,7 @@ Environment Variables:
 
 ### Config File
 
-After initializing with `--init`, edit `.larkcoder/config.yaml`:
+The setup wizard creates `.larkcoder/config.yaml` automatically on first run. You can also edit it manually:
 
 ```yaml
 lark:
@@ -103,9 +86,8 @@ lark:
   stream_flush_interval: 150 # ms, streaming output throttle interval
 
 agent:
-  command: "claude-code-acp" # ACP command (can be replaced with other compatible ACP)
-  args: [] # Command arguments
-  working_dir: "/path/to/work" # Agent working directory
+  command: "claude-code-acp" # ACP command, supports appending args
+  working_dir: ".larkcoder/projects" # Agent working directory
 
 database:
   path: ".larkcoder/data/larkcoder.db" # Database file path
@@ -116,7 +98,7 @@ shell:
   max_output: 100000 # bytes, max output size (default 100KB)
 ```
 
-> **Tip**: You can use other ACP-compatible Coding Agents by modifying the `agent.command` and `agent.args` fields.
+> **Tip**: You can use other ACP-compatible Coding Agents by modifying `agent.command`, e.g. `"my-acp-server --flag"`.
 >
 > **Shell Config**: The `shell` config section is optional, defaults will be used if not configured.
 

@@ -27,14 +27,11 @@
 直接通过 `bunx` 运行，无需克隆项目：
 
 ```bash
-# 初始化配置文件
-bunx --bun larkcoder --init
-
-# 编辑配置文件，填写飞书应用凭据
-# 编辑 .larkcoder/config.yaml
-
-# 启动服务
+# 启动服务（首次运行时自动进入交互式配置向导）
 bunx --bun larkcoder
+
+# 或显式初始化配置文件
+bunx --bun larkcoder --init
 ```
 
 ### 方式二：本地开发
@@ -46,27 +43,13 @@ git clone <repo-url> && cd larkcoder
 # 安装依赖
 bun install
 
-# 初始化配置文件（使用 CLI）
-bun run start -- --init
-# 或直接运行
-bun bin/larkcoder.ts --init
-
-# 编辑配置文件，填写飞书应用凭据
-# 编辑 .larkcoder/config.yaml
-
-# 启动服务（使用 CLI，推荐用于本地调试）
+# 启动服务（首次运行时自动进入交互式配置向导）
 bun run start
 # 或直接运行
 bun bin/larkcoder.ts
 
 # 或使用开发模式（直接运行 src/index.ts，使用环境变量 CONFIG_PATH）
 bun run dev
-```
-
-也可以直接运行启动脚本，它会自动完成依赖安装和数据库迁移：
-
-```bash
-./start.sh
 ```
 
 **本地调试提示**：
@@ -84,7 +67,7 @@ bunx --bun larkcoder [选项]
 选项:
   -c, --config <path>      指定配置文件路径 (默认: .larkcoder/config.yaml)
   -l, --log-level <level>  设置日志级别 (trace, debug, info, warn, error, fatal)
-  -i, --init               初始化配置文件（从模板创建）
+  -i, --init               启动交互式配置向导
   -h, --help               显示帮助信息
 
 环境变量:
@@ -94,29 +77,28 @@ bunx --bun larkcoder [选项]
 
 ### 配置文件
 
-使用 `--init` 初始化后，编辑 `.larkcoder/config.yaml`：
+配置向导会在首次运行时自动创建 `.larkcoder/config.yaml`，也可以手动编辑：
 
 ```yaml
 lark:
   app_id: "cli_xxxxxx" # 飞书应用 App ID
   app_secret: "your_app_secret" # 飞书应用 App Secret
-  stream_flush_interval: 150 # ms, 流式输出节流间隔
+  stream_flush_interval: 150 # ms，流式输出节流间隔
 
 agent:
-  command: "claude-code-acp" # ACP 命令（可替换为其他兼容的 ACP）
-  args: [] # 命令参数
-  working_dir: "/path/to/work" # Agent 工作目录
+  command: "claude-code-acp" # ACP 命令，支持追加参数
+  working_dir: ".larkcoder/projects" # Agent 工作目录
 
 database:
-  path: "data/larkcoder.db" # 数据库文件路径
-  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天)
+  path: ".larkcoder/data/larkcoder.db" # 数据库文件路径
+  event_max_age: 86400 # 秒，事件最大保留时间（默认 1 天）
 
 shell:
   timeout: 300000 # ms，shell 命令超时时间（默认 5 分钟）
   max_output: 100000 # bytes，最大输出大小（默认 100KB）
 ```
 
-> **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 和 `agent.args` 字段即可。
+> **提示**：可以使用其他 ACP 兼容的 Coding Agent，只需修改 `agent.command` 字段即可，例如 `"my-acp-server --flag"`。
 >
 > **Shell 配置**：`shell` 配置项为可选，不配置时使用默认值。
 
