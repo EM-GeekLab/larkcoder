@@ -1,13 +1,14 @@
 import { YAML } from "bun"
 import { readFileSync } from "node:fs"
+import { extractErrorMessage } from "../utils/errors"
 import { appConfigSchema, type AppConfig } from "./schema"
 
 export function loadConfig(filePath: string): AppConfig {
-  const rawText = readFileSync(filePath, "utf8")
-  const raw = YAML.parse(rawText)
-  const result = appConfigSchema.safeParse(raw)
-  if (!result.success) {
-    throw new Error(`Failed to load configuration: ${result.error.message}`)
+  try {
+    const rawText = readFileSync(filePath, "utf8")
+    const raw = YAML.parse(rawText)
+    return appConfigSchema.parse(raw)
+  } catch (error) {
+    throw new Error(`Failed to load configuration: ${extractErrorMessage(error)}`)
   }
-  return result.data
 }
