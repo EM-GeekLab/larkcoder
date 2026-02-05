@@ -2,7 +2,7 @@
 
 [English](README.md) | **中文**
 
-通过飞书 IM 消息控制 [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) 等 ACP 兼容的 Coding Agent，在远程服务器上完成编码工作。
+通过飞书 IM 消息控制 [ACP 兼容](https://agentclientprotocol.com/get-started/registry)的 Coding Agent（Claude Code、Codex、OpenCode 等），在远程服务器上完成编码工作。
 
 ## 功能
 
@@ -17,7 +17,7 @@
 ## 前置条件
 
 - [Bun](https://bun.sh) 运行时
-- [Claude Code ACP Server](https://www.npmjs.com/package/@zed-industries/claude-code-acp)（需先安装：`npm install -g @zed-industries/claude-code-acp`，确保 `claude-code-acp` 命令可用；也可使用其他兼容的 ACP，通过修改配置文件即可）
+- ACP 兼容的 Coding Agent（可在 [ACP Registry](https://agentclientprotocol.com/get-started/registry) 查看可用的 Agent）
 - 飞书开放平台应用（需开启消息接收和卡片回调事件）
 
 ## 快速开始
@@ -65,10 +65,11 @@ bun run dev
 bunx --bun larkcoder [选项]
 
 选项:
-  -c, --config <path>      指定配置文件路径 (默认: .larkcoder/config.yaml)
-  -l, --log-level <level>  设置日志级别 (trace, debug, info, warn, error, fatal)
-  -i, --init               初始化或覆盖配置文件（交互式向导）
-  -h, --help               显示帮助信息
+  -c, --config <path>        指定配置文件路径 (默认: .larkcoder/config.yaml)
+  -l, --log-level <level>    设置日志级别 (trace, debug, info, warn, error, fatal)
+  -i, --init                 初始化或编辑配置文件（交互式向导）
+      --setup, --settings    --init 的别名
+  -h, --help                 显示帮助信息
 
 环境变量:
   LOG_LEVEL    设置日志级别（会被 --log-level 参数覆盖）
@@ -86,7 +87,7 @@ lark:
   stream_flush_interval: 150 # ms，流式输出节流间隔
 
 agent:
-  command: "claude-code-acp" # ACP 命令，支持追加参数
+  command: "npx @zed-industries/claude-code-acp" # ACP 命令（必填），支持追加参数
   working_dir: ".larkcoder/projects" # Agent 工作目录
 
 database:

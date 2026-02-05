@@ -2,7 +2,7 @@
 
 **English** | [中文](README.zh.md)
 
-Control [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code) and other ACP-compatible Coding Agents via Lark/Feishu IM messages to complete coding tasks on remote servers.
+Control [ACP-compatible](https://agentclientprotocol.com/get-started/registry) Coding Agents (Claude Code, Codex, OpenCode, etc.) via Lark/Feishu IM messages to complete coding tasks on remote servers.
 
 ## Features
 
@@ -17,7 +17,7 @@ Control [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude
 ## Prerequisites
 
 - [Bun](https://bun.sh) runtime
-- [Claude Code ACP Server](https://www.npmjs.com/package/@zed-industries/claude-code-acp) (install first: `npm install -g @zed-industries/claude-code-acp`, ensure `claude-code-acp` command is available; other compatible ACP servers can be used by modifying the config)
+- An ACP-compatible Coding Agent (see [ACP Registry](https://agentclientprotocol.com/get-started/registry) for available agents)
 - Lark/Feishu Open Platform app (with message receiving and card callback events enabled)
 
 ## Quick Start
@@ -65,10 +65,11 @@ bun run dev
 bunx --bun larkcoder [options]
 
 Options:
-  -c, --config <path>      Specify config file path (default: .larkcoder/config.yaml)
-  -l, --log-level <level>  Set log level (trace, debug, info, warn, error, fatal)
-  -i, --init               Initialize or overwrite config file via setup wizard
-  -h, --help               Show help message
+  -c, --config <path>        Specify config file path (default: .larkcoder/config.yaml)
+  -l, --log-level <level>    Set log level (trace, debug, info, warn, error, fatal)
+  -i, --init                 Initialize or edit config file via setup wizard
+      --setup, --settings    Alias for --init
+  -h, --help                 Show help message
 
 Environment Variables:
   LOG_LEVEL    Set log level (overridden by --log-level flag)
@@ -86,7 +87,7 @@ lark:
   stream_flush_interval: 150 # ms, streaming output throttle interval
 
 agent:
-  command: "claude-code-acp" # ACP command, supports appending args
+  command: "npx @zed-industries/claude-code-acp" # ACP command (required), supports appending args
   working_dir: ".larkcoder/projects" # Agent working directory
 
 database:
