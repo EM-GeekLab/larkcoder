@@ -31,7 +31,7 @@
 bunx --bun larkcoder --init
 
 # 编辑配置文件，填写飞书应用凭据
-# 编辑 config.yaml
+# 编辑 .larkcoder/config.yaml
 
 # 启动服务
 bunx --bun larkcoder
@@ -52,7 +52,7 @@ bun run start -- --init
 bun bin/larkcoder.ts --init
 
 # 编辑配置文件，填写飞书应用凭据
-# 编辑 config.yaml
+# 编辑 .larkcoder/config.yaml
 
 # 启动服务（使用 CLI，推荐用于本地调试）
 bun run start
@@ -71,8 +71,8 @@ bun run dev
 
 **本地调试提示**：
 
-- 使用 `bun run start` 或 `bun bin/larkcoder.ts` 可以像 `bunx --bun larkcoder` 一样使用 CLI 功能（如 `--init`、`--config` 等），但运行的是本地代码，方便调试和修改
-- 使用 `bun run dev` 直接运行 `src/index.ts`，适合快速启动（使用默认 `config.yaml` 或 `CONFIG_PATH` 环境变量）
+- 使用 `bun run start` 或 `bun bin/larkcoder.ts` 可以像 `bunx --bun larkcoder` 一样使用 CLI 功能（如 `--init`、`--config`、`--log-level` 等），但运行的是本地代码，方便调试和修改
+- 使用 `bun run dev` 直接运行 `src/index.ts`，适合快速启动（使用默认 `.larkcoder/config.yaml` 或 `CONFIG_PATH` 环境变量）
 
 ## 配置
 
@@ -82,14 +82,19 @@ bun run dev
 bunx --bun larkcoder [选项]
 
 选项:
-  -c, --config <path>  指定配置文件路径 (默认: config.yaml)
-  -i, --init           初始化配置文件（从模板创建）
-  -h, --help           显示帮助信息
+  -c, --config <path>      指定配置文件路径 (默认: .larkcoder/config.yaml)
+  -l, --log-level <level>  设置日志级别 (trace, debug, info, warn, error, fatal)
+  -i, --init               初始化配置文件（从模板创建）
+  -h, --help               显示帮助信息
+
+环境变量:
+  LOG_LEVEL    设置日志级别（会被 --log-level 参数覆盖）
+  CONFIG_PATH  设置配置文件路径（会被 --config 参数覆盖）
 ```
 
 ### 配置文件
 
-使用 `--init` 初始化后，编辑 `config.yaml`：
+使用 `--init` 初始化后，编辑 `.larkcoder/config.yaml`：
 
 ```yaml
 lark:

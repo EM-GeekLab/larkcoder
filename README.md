@@ -31,7 +31,7 @@ Run directly via `bunx` without cloning the project:
 bunx --bun larkcoder --init
 
 # Edit config file and fill in Lark/Feishu app credentials
-# Edit config.yaml
+# Edit .larkcoder/config.yaml
 
 # Start service
 bunx --bun larkcoder
@@ -52,7 +52,7 @@ bun run start -- --init
 bun bin/larkcoder.ts --init
 
 # Edit config file and fill in Lark/Feishu app credentials
-# Edit config.yaml
+# Edit .larkcoder/config.yaml
 
 # Start service (using CLI, recommended for local debugging)
 bun run start
@@ -71,8 +71,8 @@ You can also run the startup script directly, which will automatically install d
 
 **Local Debugging Tips**:
 
-- Use `bun run start` or `bun bin/larkcoder.ts` to use CLI features (like `--init`, `--config`, etc.) just like `bunx --bun larkcoder`, but runs local code for easy debugging and modification
-- Use `bun run dev` to run `src/index.ts` directly for quick startup (uses default `config.yaml` or `CONFIG_PATH` env var)
+- Use `bun run start` or `bun bin/larkcoder.ts` to use CLI features (like `--init`, `--config`, `--log-level`, etc.) just like `bunx --bun larkcoder`, but runs local code for easy debugging and modification
+- Use `bun run dev` to run `src/index.ts` directly for quick startup (uses default `.larkcoder/config.yaml` or `CONFIG_PATH` env var)
 
 ## Configuration
 
@@ -82,14 +82,19 @@ You can also run the startup script directly, which will automatically install d
 bunx --bun larkcoder [options]
 
 Options:
-  -c, --config <path>  Specify config file path (default: config.yaml)
-  -i, --init           Initialize config file from template
-  -h, --help           Show help message
+  -c, --config <path>      Specify config file path (default: .larkcoder/config.yaml)
+  -l, --log-level <level>  Set log level (trace, debug, info, warn, error, fatal)
+  -i, --init               Initialize config file from template
+  -h, --help               Show help message
+
+Environment Variables:
+  LOG_LEVEL    Set log level (overridden by --log-level flag)
+  CONFIG_PATH  Set config file path (overridden by --config flag)
 ```
 
 ### Config File
 
-After initializing with `--init`, edit `config.yaml`:
+After initializing with `--init`, edit `.larkcoder/config.yaml`:
 
 ```yaml
 lark:

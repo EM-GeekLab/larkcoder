@@ -1,11 +1,10 @@
 #!/usr/bin/env bun
-import { existsSync, writeFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { getConfigPath } from "../src/config/path"
 import { start } from "../src/index"
 import { type LogLevel, LOG_LEVELS, setLogLevel } from "../src/utils/logger"
 import { getExampleConfig } from "./config-example.macro.ts" with { type: "macro" }
-
-const DEFAULT_CONFIG_NAME = "config.yaml"
 
 interface CliArgs {
   configPath?: string
@@ -48,7 +47,7 @@ Usage:
   bunx --bun larkcoder [options]
 
 Options:
-  -c, --config <path>      Specify config file path (default: config.yaml)
+  -c, --config <path>      Specify config file path (default: .larkcoder/config.yaml)
   -l, --log-level <level>  Set log level (${LOG_LEVELS.join(", ")})
   -i, --init               Initialize config file from template
   -h, --help               Show help message
@@ -71,6 +70,7 @@ function initConfig(configPath: string): void {
     process.exit(1)
   }
 
+  mkdirSync(dirname(configPath), { recursive: true })
   const exampleContent = getExampleConfig()
   writeFileSync(configPath, exampleContent, "utf8")
   console.log(`Config file created: ${configPath}`)
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     return
   }
 
-  const configPath = resolve(args.configPath ?? process.env.CONFIG_PATH ?? DEFAULT_CONFIG_NAME)
+  const configPath = resolve(args.configPath ?? getConfigPath())
 
   if (args.init) {
     initConfig(configPath)

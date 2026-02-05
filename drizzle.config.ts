@@ -1,7 +1,8 @@
 import { defineConfig } from "drizzle-kit"
 import { loadConfig } from "./src/config/loader"
+import { getConfigPath } from "./src/config/path"
 
-const configPath = process.env.CONFIG_PATH ?? "config.yaml"
+const configPath = getConfigPath()
 const databasePath = loadConfig(configPath).database.path
 
 export default defineConfig({

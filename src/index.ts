@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 import { ProcessManager } from "./agent/processManager"
 import { loadConfig } from "./config/loader"
+import { getConfigPath } from "./config/path"
 import { LarkClient } from "./lark/client"
 import { DocService } from "./lark/docService"
 import { LarkEventHandler } from "./lark/eventHandler"
@@ -87,8 +88,7 @@ export async function start(configPath: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const configPath = process.env.CONFIG_PATH ?? "config.yaml"
-  await start(configPath)
+  await start(getConfigPath())
 }
 
 if (import.meta.main) {
