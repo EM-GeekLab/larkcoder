@@ -1,7 +1,8 @@
 import * as Lark from "@larksuiteoapi/node-sdk"
 import type { SessionService } from "../session/service"
 import type { CardAction, ParsedMessage } from "./types"
-import { type Logger, createLarkLogger } from "../utils/logger"
+import type { Logger } from "../utils/logger"
+import { createLarkLogger, getLarkLoggerLevel } from "./logger"
 
 export type MessageHandler = (message: ParsedMessage) => Promise<void>
 export type CardActionHandler = (action: CardAction) => Promise<void>
@@ -31,7 +32,7 @@ export class LarkEventHandler {
   createEventDispatcher(sessionService: SessionService): Lark.EventDispatcher {
     return new Lark.EventDispatcher({
       logger: createLarkLogger("lark-event"),
-      loggerLevel: Lark.LoggerLevel.error,
+      loggerLevel: getLarkLoggerLevel(),
     }).register({
       "im.message.receive_v1": async (data) => {
         const eventId = data.event_id

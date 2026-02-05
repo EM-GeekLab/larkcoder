@@ -1,6 +1,7 @@
 import * as lark from "@larksuiteoapi/node-sdk"
 import type { LarkConfig } from "./types"
-import { type Logger, createLarkLogger } from "../utils/logger"
+import type { Logger } from "../utils/logger"
+import { createLarkLogger, getLarkLoggerLevel } from "./logger"
 import { buildMarkdownCard } from "./cards/index"
 
 export class LarkClient {
@@ -15,7 +16,7 @@ export class LarkClient {
       appId: config.appId,
       appSecret: config.appSecret,
       logger: createLarkLogger("lark-sdk"),
-      loggerLevel: lark.LoggerLevel.error,
+      loggerLevel: getLarkLoggerLevel(),
     })
   }
 
@@ -24,7 +25,7 @@ export class LarkClient {
       appId: this.config.appId,
       appSecret: this.config.appSecret,
       logger: createLarkLogger("lark-ws"),
-      loggerLevel: lark.LoggerLevel.error,
+      loggerLevel: getLarkLoggerLevel(),
     })
     await this.wsClient.start({ eventDispatcher })
   }
